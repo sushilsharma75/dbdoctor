@@ -1,0 +1,32 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint-and-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --group dev --group testbed
+      - run: make lint
+      - run: make test
+
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --group dev --group testbed
+      - name: Start testbed
+        run: docker compose -f testbed/docker-compose.yml up -d --wait
+      - name: Seed (smoke scale)
+        run: |
+          uv run python testbed/seed/seed.py --scale 0.02
+          MYSQL_PORT=13307 uv run python testbed/seed/seed.py --engine mysql --scale 0.02
+      - name: Generate workload
+        run: uv run python testbed/seed/workload.py --minutes 0.5
+      - name: Integration tests
+        run: uv run pytest -m integration

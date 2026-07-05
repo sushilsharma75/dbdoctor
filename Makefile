@@ -1,4 +1,4 @@
-.PHONY: setup lint test testbed-up testbed-down testbed-seed testbed-load
+.PHONY: setup lint test dist testbed-up testbed-down testbed-seed testbed-load
 
 # --- development -------------------------------------------------------------
 
@@ -11,6 +11,9 @@ lint:
 
 test:
 	uv run pytest
+
+dist:  ## build shippable single-file collector artifacts + checksums
+	uv run python tools/build_dist.py
 
 # --- testbed (see testbed/README.md) ----------------------------------------
 

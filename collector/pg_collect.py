@@ -229,7 +229,8 @@ def collect_sessions(cur) -> list[dict]:
             "session_id": str(pid),
             "state": state,
             "query_digest": digest_of(query) if query else None,
-            "age_seconds": round(age, 3) if age is not None else None,
+            # extract(epoch ...) arrives as Decimal; snapshots are plain JSON floats
+            "age_seconds": round(float(age), 3) if age is not None else None,
         }
         for pid, state, query, age in cur.fetchall()
     ]
@@ -250,7 +251,7 @@ def collect_lock_waits(cur) -> list[dict]:
         {
             "blocker_digest": digest_of(blocker_q) if blocker_q else None,
             "blocked_digest": digest_of(blocked_q) if blocked_q else None,
-            "wait_ms": round(wait_ms, 1) if wait_ms is not None else 0.0,
+            "wait_ms": round(float(wait_ms), 1) if wait_ms is not None else 0.0,
         }
         for blocked_q, blocker_q, wait_ms in cur.fetchall()
     ]
