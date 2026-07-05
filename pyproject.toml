@@ -1,0 +1,44 @@
+[project]
+name = "dbdoctor"
+version = "0.1.0"
+description = "PostgreSQL + MySQL performance advisor: agentless collectors, deterministic rule engine, expert-reviewed reports."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.111",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "uvicorn>=0.30",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.2",
+    "ruff>=0.5",
+    "httpx>=0.27",
+]
+testbed = [
+    "psycopg[binary]>=3.1",
+    "pymysql>=1.1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["engine", "report", "webapp"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "webapp/backend/tests"]
+markers = [
+    "integration: tests that require the docker-compose testbed to be running",
+]
+addopts = "-m 'not integration'"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = ["webapp/frontend"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

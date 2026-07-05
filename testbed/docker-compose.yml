@@ -1,0 +1,57 @@
+name: dbdoctor-testbed
+
+services:
+  postgres:
+    image: postgres:15
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - pg_stat_statements.max=10000
+      - -c
+      - pg_stat_statements.track=all
+      - -c
+      - track_io_timing=on
+    environment:
+      POSTGRES_USER: dbdoctor
+      POSTGRES_PASSWORD: dbdoctor
+      POSTGRES_DB: shop
+    ports:
+      - "15432:5432"
+    volumes:
+      - ./init/pg_init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dbdoctor -d shop"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  mysql:
+    image: mysql:8.0
+    # performance_schema and statement digests are ON by default in MySQL 8;
+    # set them explicitly so the testbed keeps working if defaults change.
+    command:
+      - --performance-schema=ON
+      - --performance-schema-consumer-events-statements-history=ON
+      - --max-digest-length=4096
+      - --performance-schema-max-digest-length=4096
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: dbdoctor
+      MYSQL_PASSWORD: dbdoctor
+      MYSQL_DATABASE: shop
+    ports:
+      - "13306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  pg_data:
+  mysql_data:
