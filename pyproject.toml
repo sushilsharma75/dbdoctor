@@ -42,3 +42,7 @@ extend-exclude = ["webapp/frontend"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+# one source-mapping description per line beats wrapped fragments
+"engine/models.py" = ["E501"]
