@@ -52,11 +52,7 @@ def test_mysql8_output_validates_and_shows_planted_problems(tmp_path):
 
     # P1: the unindexed customer_id filter must be a full-scan digest with
     # rows_examined >> rows_returned
-    p1 = [
-        q
-        for q in snap.queries
-        if "customer_id" in q.normalized_sql and q.full_scan_flag
-    ]
+    p1 = [q for q in snap.queries if "customer_id" in q.normalized_sql and q.full_scan_flag]
     assert p1, "planted full-scan query not captured"
     assert p1[0].rows_examined and p1[0].rows_examined > p1[0].rows_returned * 100
 
