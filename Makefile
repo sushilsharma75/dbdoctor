@@ -1,4 +1,4 @@
-.PHONY: setup lint test dist audit-local testbed-up testbed-down testbed-seed testbed-load
+.PHONY: setup lint test dist audit-local report-sample testbed-up testbed-down testbed-seed testbed-load
 
 PG_DSN ?= postgresql://dbdoctor:dbdoctor@127.0.0.1:15432/shop
 MYSQL_DSN ?= mysql://dbdoctor:dbdoctor@127.0.0.1:13306/shop
@@ -17,6 +17,12 @@ test:
 
 dist:  ## build shippable single-file collector artifacts + checksums
 	uv run python tools/build_dist.py
+
+report-sample:  ## sample PDF bundles from the committed fixtures
+	uv run dbdoctor-audit --snapshot fixtures/pg_full.json --client-alias "Sample Co (PG)" --out out/sample_pg --skip-ai
+	uv run dbdoctor-audit --snapshot fixtures/mysql_full.json --client-alias "Sample Co (MySQL)" --out out/sample_mysql --skip-ai
+	cp out/sample_pg/report.pdf out/sample_pg.pdf && cp out/sample_mysql/report.pdf out/sample_mysql.pdf
+	@ls -la out/*.pdf
 
 audit-local:  ## collector -> engine -> findings table, straight off the testbed
 	mkdir -p out

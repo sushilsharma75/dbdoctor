@@ -20,6 +20,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - run: uv sync --group dev --group testbed
+      - name: Install Chromium for PDF rendering
+        run: uv run playwright install --with-deps chromium
       - name: Start testbed
         run: docker compose -f testbed/docker-compose.yml up -d --wait
       - name: Seed (smoke scale)
