@@ -20,8 +20,9 @@ testbed-up:  ## start PG15 + MySQL8 with slow-query instrumentation enabled
 testbed-down:
 	docker compose -f testbed/docker-compose.yml down -v
 
-testbed-seed:  ## create the ecommerce schema and bulk rows in both DBs
+testbed-seed:  ## create the ecommerce schema and bulk rows in all three DBs
 	uv run python testbed/seed/seed.py
+	MYSQL_PORT=13307 uv run python testbed/seed/seed.py --engine mysql
 
 testbed-load:  ## run the mixed problem workload (default 3 minutes)
 	uv run python testbed/seed/workload.py --minutes $(or $(MINUTES),3)

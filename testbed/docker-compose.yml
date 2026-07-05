@@ -45,6 +45,7 @@ services:
     ports:
       - "13306:3306"
     volumes:
+      - ./init/mysql_init.sql:/docker-entrypoint-initdb.d/01_grants.sql:ro
       - mysql_data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
@@ -52,6 +53,29 @@ services:
       timeout: 3s
       retries: 20
 
+  mariadb:
+    image: mariadb:11
+    # used by T2.7 tests: no sys schema, no digest quantiles — the collector
+    # must degrade gracefully here
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_USER: dbdoctor
+      MARIADB_PASSWORD: dbdoctor
+      MARIADB_DATABASE: shop
+    command:
+      - --performance-schema=ON
+    ports:
+      - "13307:3306"
+    volumes:
+      - ./init/mariadb_init.sql:/docker-entrypoint-initdb.d/01_grants.sql:ro
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
 volumes:
   pg_data:
   mysql_data:
+  mariadb_data:

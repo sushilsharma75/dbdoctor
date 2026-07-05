@@ -8,9 +8,10 @@ against realistic slow-query workloads. Never contains real customer data.
 | Service | Image | Port | Instrumentation |
 |---|---|---|---|
 | postgres | `postgres:15` | `15432` | `pg_stat_statements` preloaded + extension created, `track_io_timing=on` |
-| mysql | `mysql:8.0` | `13306` | `performance_schema` on, statement digests enabled |
+| mysql | `mysql:8.0` | `13306` | `performance_schema` on, statement digests enabled, collector grants applied |
+| mariadb | `mariadb:11` | `13307` | degradation target for T2.7 tests: no sys schema, no digest quantiles |
 
-Credentials for both: user `dbdoctor` / password `dbdoctor` / database `shop`.
+Credentials for all: user `dbdoctor` / password `dbdoctor` / database `shop`.
 
 ## Usage (from repo root)
 
