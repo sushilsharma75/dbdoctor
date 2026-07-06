@@ -14,6 +14,7 @@ build/
 # Local artifacts
 out/
 *.pdf
+!webapp/frontend/public/samples/*.pdf
 snapshot*.json
 !fixtures/*.json
 
