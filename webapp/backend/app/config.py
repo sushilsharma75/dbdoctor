@@ -29,6 +29,17 @@ class Settings(BaseSettings):
     enable_pdf: bool = True
     enable_ai: bool = False  # off until pilots warrant the spend
 
+    # billing (feature-flagged off for pilot customers, per plan)
+    enable_payments: bool = False
+    price_usd_cents: int = 19900  # Stripe: $199
+    price_inr_paise: int = 999900  # Razorpay: ₹9,999 (GST-inclusive)
+    gst_rate_pct: int = 18
+    seller_gstin: str = ""  # founder's GSTIN, set in production .env
+    seller_state_code: str = "36"  # Telangana; first two GSTIN digits
+    invoice_prefix: str = "DBD"
+    stripe_webhook_secret: str = ""
+    razorpay_webhook_secret: str = ""
+
     @property
     def admin_email_set(self) -> set[str]:
         return {e.strip().lower() for e in self.admin_emails.split(",") if e.strip()}
