@@ -1,0 +1,43 @@
+# dbdoctor app stack (MVP: one VM, one compose file — architecture §6).
+# Copy .env.example to .env and set real secrets before `docker compose up`.
+name: dbdoctor
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    environment:
+      DBDOCTOR_DATABASE_URL: postgresql+psycopg://dbdoctor:${APP_DB_PASSWORD:?set in .env}@appdb:5432/dbdoctor
+      DBDOCTOR_JWT_SECRET: ${JWT_SECRET:?set in .env}
+      DBDOCTOR_ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      DBDOCTOR_DATA_DIR: /data
+      DBDOCTOR_ENABLE_AI: ${ENABLE_AI:-false}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    volumes:
+      - app_data:/data
+    depends_on:
+      appdb:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  appdb:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: dbdoctor
+      POSTGRES_PASSWORD: ${APP_DB_PASSWORD:?set in .env}
+      POSTGRES_DB: dbdoctor
+    volumes:
+      - app_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dbdoctor -d dbdoctor"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  app_data:
+  app_db:

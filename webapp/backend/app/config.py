@@ -15,6 +15,24 @@ class Settings(BaseSettings):
     env: str = "development"
     version: str = "0.1.0"
 
+    # persistence
+    database_url: str = "sqlite:///./dbdoctor.db"  # compose overrides with postgres
+    data_dir: str = "./data"  # snapshots + report bundles live here
+
+    # auth
+    jwt_secret: str = "dev-secret-change-me"  # MUST be overridden in production
+    jwt_expiry_minutes: int = 60
+    admin_emails: str = ""  # comma-separated; these accounts get review rights
+
+    # pipeline
+    max_upload_bytes: int = 50 * 1024 * 1024
+    enable_pdf: bool = True
+    enable_ai: bool = False  # off until pilots warrant the spend
+
+    @property
+    def admin_email_set(self) -> set[str]:
+        return {e.strip().lower() for e in self.admin_emails.split(",") if e.strip()}
+
 
 @lru_cache
 def get_settings() -> Settings:

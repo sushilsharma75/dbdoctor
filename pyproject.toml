@@ -5,12 +5,18 @@ description = "PostgreSQL + MySQL performance advisor: agentless collectors, det
 requires-python = ">=3.12"
 dependencies = [
     "anthropic>=0.40",
+    "bcrypt>=4.1",
     "click>=8.1",
+    "email-validator>=2.0",
     "fastapi>=0.111",
     "jinja2>=3.1",
     "playwright>=1.45",
+    "psycopg[binary]>=3.1",
     "pydantic>=2.7",
     "pydantic-settings>=2.3",
+    "pyjwt>=2.8",
+    "python-multipart>=0.0.9",
+    "sqlalchemy>=2.0",
     "uvicorn>=0.30",
 ]
 
@@ -49,6 +55,15 @@ extend-exclude = ["webapp/frontend"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's dependency-injection idiom uses calls in argument defaults
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.File",
+    "fastapi.Form",
+    "fastapi.security.HTTPBearer",
+]
 
 [tool.ruff.lint.per-file-ignores]
 # one source-mapping description per line beats wrapped fragments
