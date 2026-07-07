@@ -28,49 +28,60 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="mx-auto max-w-sm">
-      <h1 className="text-2xl">{mode === 'login' ? 'Sign in' : 'Create your account'}</h1>
-      <form onSubmit={submit} className="mt-6 space-y-4">
-        <input
-          type="email"
-          required
-          placeholder="you@company.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full border border-ink/30 bg-white px-3 py-2"
-          data-testid="email"
-        />
-        <input
-          type="password"
-          required
-          minLength={8}
-          placeholder="password (8+ characters)"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full border border-ink/30 bg-white px-3 py-2"
-          data-testid="password"
-        />
-        {error && (
-          <p className="text-sm text-rust" data-testid="auth-error">
-            {error}
-          </p>
-        )}
+    <div className="mx-auto max-w-sm pt-8">
+      <div className="panel p-6">
+        <p className="label">{mode === 'login' ? 'authenticate' : 'create account'}</p>
+        <h1 className="mt-2 text-xl font-light tracking-tight text-bone-100">
+          {mode === 'login' ? 'Sign in' : 'Create your account'}
+        </h1>
+        <form onSubmit={submit} className="mt-6 space-y-3">
+          <div>
+            <label className="label mb-1.5 block">email</label>
+            <input
+              type="email"
+              required
+              placeholder="you@company.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="field"
+              data-testid="email"
+            />
+          </div>
+          <div>
+            <label className="label mb-1.5 block">password</label>
+            <input
+              type="password"
+              required
+              minLength={8}
+              placeholder="8+ characters"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="field"
+              data-testid="password"
+            />
+          </div>
+          {error && (
+            <p className="text-xs text-flag-critical" data-testid="auth-error">
+              {error}
+            </p>
+          )}
+          <button
+            type="submit"
+            disabled={busy}
+            className="btn btn-primary w-full"
+            data-testid="submit"
+          >
+            {busy ? '…' : mode === 'login' ? 'Sign in' : 'Sign up'}
+          </button>
+        </form>
         <button
-          type="submit"
-          disabled={busy}
-          className="w-full bg-ink py-2 text-cream hover:bg-rust disabled:opacity-50"
-          data-testid="submit"
+          onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+          className="mt-4 font-mono text-[11px] text-bone-500 hover:text-bone-300"
+          data-testid="toggle-mode"
         >
-          {busy ? '…' : mode === 'login' ? 'Sign in' : 'Sign up'}
+          {mode === 'login' ? '→ New here? Create an account' : '→ Already registered? Sign in'}
         </button>
-      </form>
-      <button
-        onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-        className="mt-4 text-sm text-ink/60 underline hover:text-rust"
-        data-testid="toggle-mode"
-      >
-        {mode === 'login' ? 'New here? Create an account' : 'Already registered? Sign in'}
-      </button>
+      </div>
     </div>
   );
 }

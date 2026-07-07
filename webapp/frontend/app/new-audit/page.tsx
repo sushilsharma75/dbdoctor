@@ -40,13 +40,17 @@ export default function NewAudit() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <h1 className="text-2xl">New audit</h1>
+    <div className="mx-auto max-w-2xl space-y-4">
+      <div>
+        <p className="label">new audit</p>
+        <h1 className="mt-1 text-2xl font-light tracking-tight text-bone-100">New audit</h1>
+      </div>
 
       {/* step 1: engine */}
-      <section className="mt-8">
-        <h2 className="font-bold">1 · Which engine?</h2>
-        <div className="mt-3 flex gap-4">
+      <section className="panel p-5">
+        <p className="font-mono text-[11px] text-flag-warning">01</p>
+        <h2 className="mt-1 text-sm font-medium text-bone-100">Which engine?</h2>
+        <div className="mt-3 flex gap-3">
           {(['postgres', 'mysql'] as Engine[]).map((e) => (
             <button
               key={e}
@@ -54,7 +58,7 @@ export default function NewAudit() {
                 setEngine(e);
                 setStep(2);
               }}
-              className={`border px-6 py-3 ${engine === e ? 'border-rust bg-white text-rust' : 'border-ink/30 bg-white hover:border-rust'}`}
+              className={`btn ${engine === e ? 'btn-primary' : 'btn-secondary'}`}
               data-testid={`engine-${e}`}
             >
               {e === 'postgres' ? 'PostgreSQL' : 'MySQL / MariaDB'}
@@ -65,28 +69,27 @@ export default function NewAudit() {
 
       {/* step 2: run the collector */}
       {step >= 2 && engine && (
-        <section className="mt-8" data-testid="step-collector">
-          <h2 className="font-bold">2 · Run the collector (read-only, on your machine)</h2>
-          <p className="mt-2 text-sm text-ink/80">
-            <a href={api.collectorUrl(engine)} className="underline hover:text-rust">
+        <section className="panel p-5" data-testid="step-collector">
+          <p className="font-mono text-[11px] text-flag-warning">02</p>
+          <h2 className="mt-1 text-sm font-medium text-bone-100">
+            Run the collector (read-only, on your machine)
+          </h2>
+          <p className="mt-2 text-[13px] leading-relaxed text-bone-400">
+            <a href={api.collectorUrl(engine)} className="text-flag-info hover:underline">
               Download {engine === 'postgres' ? 'pg_collect.py' : 'mysql_collect.py'}
             </a>{' '}
             — a single Python file you can read before running. It opens a read-only session and
             strips every literal before writing the snapshot. Then run:
           </p>
-          <pre className="mt-3 overflow-x-auto bg-ink p-4 text-xs text-cream">
+          <pre className="panel-inset mt-3 overflow-x-auto p-4 font-mono text-[11px] leading-relaxed text-bone-300">
             {RUN_COMMANDS[engine]}
           </pre>
-          <p className="mt-2 text-xs text-ink/60">
-            Requires Python 3.10+ and{' '}
-            {engine === 'postgres' ? 'pip install "psycopg[binary]"' : 'pip install pymysql'}. The
-            script prints its own SHA256 so you can verify it.
+          <p className="mt-2 font-mono text-[11px] text-bone-500">
+            requires python 3.10+ ·{' '}
+            {engine === 'postgres' ? 'pip install "psycopg[binary]"' : 'pip install pymysql'} · the
+            script prints its own sha256
           </p>
-          <button
-            onClick={() => setStep(3)}
-            className="mt-4 bg-ink px-5 py-2 text-cream hover:bg-rust"
-            data-testid="collector-done"
-          >
+          <button onClick={() => setStep(3)} className="btn btn-primary mt-4" data-testid="collector-done">
             I have my snapshot.json
           </button>
         </section>
@@ -94,38 +97,47 @@ export default function NewAudit() {
 
       {/* step 3: upload */}
       {step >= 3 && (
-        <section className="mt-8" data-testid="step-upload">
-          <h2 className="font-bold">3 · Upload the snapshot</h2>
-          <input
-            type="text"
-            placeholder="a name for this database (shown on the report)"
-            value={alias}
-            onChange={(e) => setAlias(e.target.value)}
-            className="mt-3 w-full border border-ink/30 bg-white px-3 py-2"
-            data-testid="alias"
-          />
-          <input
-            type="file"
-            accept=".json,application/json"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            className="mt-3 w-full border border-ink/30 bg-white px-3 py-2"
-            data-testid="snapshot-file"
-          />
+        <section className="panel p-5" data-testid="step-upload">
+          <p className="font-mono text-[11px] text-flag-warning">03</p>
+          <h2 className="mt-1 text-sm font-medium text-bone-100">Upload the snapshot</h2>
+          <div className="mt-3 space-y-3">
+            <div>
+              <label className="label mb-1.5 block">database name (shown on the report)</label>
+              <input
+                type="text"
+                placeholder="e.g. acme production"
+                value={alias}
+                onChange={(e) => setAlias(e.target.value)}
+                className="field"
+                data-testid="alias"
+              />
+            </div>
+            <div>
+              <label className="label mb-1.5 block">snapshot.json</label>
+              <input
+                type="file"
+                accept=".json,application/json"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                className="field cursor-pointer"
+                data-testid="snapshot-file"
+              />
+            </div>
+          </div>
           {error && (
-            <p className="mt-3 text-sm text-rust" data-testid="upload-error">
+            <p className="mt-3 text-xs text-flag-critical" data-testid="upload-error">
               {error}
             </p>
           )}
           <button
             onClick={upload}
             disabled={!file || busy}
-            className="mt-4 bg-ink px-5 py-2 text-cream hover:bg-rust disabled:opacity-50"
+            className="btn btn-primary mt-4"
             data-testid="upload"
           >
             {busy ? 'Uploading…' : 'Upload & start analysis'}
           </button>
-          <p className="mt-3 text-xs text-ink/60">
-            You can open snapshot.json in any editor first — everything we receive is in that file.
+          <p className="mt-3 font-mono text-[11px] text-bone-500">
+            you can open snapshot.json in any editor first — everything we receive is in that file
           </p>
         </section>
       )}

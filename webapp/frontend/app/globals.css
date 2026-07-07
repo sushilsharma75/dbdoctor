@@ -2,6 +2,196 @@
 @tailwind components;
 @tailwind utilities;
 
+/* POSTMORTEM design system — tokens + component classes ported from
+   postmortem-reference.css (the founder's prior app). */
+
+:root {
+  --ink-950: #070d1a;
+  --ink-900: #0b1424;
+  --ink-800: #111d33;
+  --ink-700: #182842;
+  --ink-600: #243657;
+  --ink-500: #36507d;
+
+  --bone-100: #f5f5f4;
+  --bone-200: #e7e5e4;
+  --bone-300: #d6d3d1;
+  --bone-400: #a8a29e;
+  --bone-500: #78716c;
+
+  --flag-critical-rgb: 239, 68, 68;
+  --flag-warning-rgb: 245, 158, 11;
+  --flag-info-rgb: 96, 165, 250;
+  --flag-ok-rgb: 16, 185, 129;
+  --ink-600-rgb: 36, 54, 87;
+  --ink-900-rgb: 11, 20, 36;
+  --ink-950-rgb: 7, 13, 26;
+}
+
 body {
-  @apply bg-cream text-ink font-serif;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(56, 120, 220, 0.18) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 50% at 100% 10%, rgba(37, 99, 200, 0.12) 0%, transparent 55%),
+    radial-gradient(ellipse 90% 70% at 0% 100%, rgba(30, 64, 160, 0.14) 0%, transparent 60%),
+    linear-gradient(160deg, #0a1426 0%, #0a1020 45%, #080d18 100%);
+  background-attachment: fixed;
+  @apply font-sans text-bone-200 antialiased;
+  min-height: 100vh;
+}
+
+::selection {
+  background: rgba(245, 158, 11, 0.3);
+  color: #fafaf9;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ink-600);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+@layer components {
+  .panel {
+    background-color: rgba(var(--ink-900-rgb), 0.55);
+    border: 1px solid rgba(var(--ink-600-rgb), 0.55);
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+  }
+
+  .panel-inset {
+    background-color: rgba(var(--ink-950-rgb), 0.5);
+    border: 1px solid rgba(var(--ink-600-rgb), 0.4);
+    border-radius: 8px;
+  }
+
+  .label {
+    font-size: 10px;
+    @apply font-mono uppercase;
+    letter-spacing: 0.18em;
+    color: var(--bone-400);
+  }
+
+  .stat-num {
+    font-size: 2.25rem;
+    font-weight: 300;
+    letter-spacing: -0.04em;
+    color: var(--bone-100);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    @apply font-mono uppercase;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    transition: all 150ms;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--bone-300);
+    cursor: pointer;
+  }
+
+  .btn-primary {
+    background-color: rgba(var(--flag-warning-rgb), 0.1);
+    color: #f59e0b;
+    border-color: rgba(var(--flag-warning-rgb), 0.3);
+  }
+  .btn-primary:hover {
+    background-color: rgba(var(--flag-warning-rgb), 0.2);
+    border-color: rgba(var(--flag-warning-rgb), 0.5);
+  }
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-secondary {
+    background-color: var(--ink-800);
+    color: var(--bone-300);
+    border-color: var(--ink-600);
+  }
+  .btn-secondary:hover {
+    border-color: var(--bone-500);
+    color: var(--bone-100);
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 2px;
+    @apply font-mono uppercase;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    border: 1px solid transparent;
+  }
+
+  .badge-critical {
+    background: rgba(var(--flag-critical-rgb), 0.15);
+    color: #ef4444;
+    border-color: rgba(var(--flag-critical-rgb), 0.3);
+  }
+  .badge-warning {
+    background: rgba(var(--flag-warning-rgb), 0.15);
+    color: #f59e0b;
+    border-color: rgba(var(--flag-warning-rgb), 0.3);
+  }
+  .badge-info {
+    background: rgba(var(--flag-info-rgb), 0.15);
+    color: #60a5fa;
+    border-color: rgba(var(--flag-info-rgb), 0.3);
+  }
+  .badge-ok {
+    background: rgba(var(--flag-ok-rgb), 0.15);
+    color: #10b981;
+    border-color: rgba(var(--flag-ok-rgb), 0.3);
+  }
+  .badge-neutral {
+    background: var(--ink-700);
+    color: var(--bone-300);
+    border-color: var(--ink-600);
+  }
+
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  .field {
+    @apply panel-inset w-full px-3 py-2 text-sm text-bone-200 outline-none;
+  }
+  .field::placeholder {
+    color: var(--bone-500);
+  }
+  .field:focus {
+    border-color: rgba(var(--flag-warning-rgb), 0.5);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+.animate-pulse-slow {
+  animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
