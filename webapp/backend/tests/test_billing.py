@@ -168,7 +168,7 @@ def test_razorpay_webhook_generates_intra_state_invoice(client, monkeypatch, tmp
     from webapp.backend.app.config import get_settings
 
     invoice = Path(get_settings().data_dir) / "invoices" / f"{invoice_number}.html"
-    html = invoice.read_text()
+    html = invoice.read_text(encoding="utf-8")
     assert "762.64" in html  # CGST and SGST at 9% each
     assert "Intra-state supply" in html
     assert "998313" in html  # SAC code

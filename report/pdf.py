@@ -19,10 +19,18 @@ HEADER_TEMPLATE = '<div style="font-size:1px;"></div>'  # header space kept empt
 
 def _find_system_chromium() -> str | None:
     roots = [os.environ.get("PLAYWRIGHT_BROWSERS_PATH", ""), "/opt/pw-browsers"]
+    # per-OS layout of the Chromium binary inside a downloaded browser dir
+    patterns = (
+        "chromium-*/chrome-linux/chrome",
+        "chromium-*/chrome-win/chrome.exe",  # Windows
+        "chromium-*/chrome-mac/Chromium.app/Contents/MacOS/Chromium",  # macOS
+        "chromium.exe",
+        "chromium",
+    )
     for root in filter(None, roots):
-        for pattern in ("chromium-*/chrome-linux/chrome", "chromium"):
+        for pattern in patterns:
             for candidate in sorted(glob.glob(str(Path(root) / pattern)), reverse=True):
-                if os.access(candidate, os.X_OK) and not Path(candidate).is_dir():
+                if Path(candidate).is_file() and os.access(candidate, os.X_OK):
                     return candidate
     return None
 
