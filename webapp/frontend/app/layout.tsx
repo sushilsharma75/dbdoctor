@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import './globals.css';
+import Nav from './nav';
 
 export const metadata: Metadata = {
   title: 'dbdoctor — PostgreSQL & MySQL performance audits',
@@ -22,20 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 dbdoctor
               </span>
             </Link>
-            <div className="flex items-center gap-x-6 font-mono text-[11px] uppercase tracking-wider">
-              <a href="/kb/index.html" className="text-bone-400 hover:text-bone-200">
-                Docs
-              </a>
-              <Link href="/new-audit" className="text-bone-400 hover:text-bone-200">
-                New audit
-              </Link>
-              <Link href="/dashboard" className="text-bone-400 hover:text-bone-200">
-                Dashboard
-              </Link>
-              <Link href="/login" className="btn btn-secondary !py-1.5">
-                Sign in
-              </Link>
-            </div>
+            <Nav />
           </nav>
         </header>
         <main className="mx-auto max-w-6xl px-4 py-10 md:px-8">{children}</main>

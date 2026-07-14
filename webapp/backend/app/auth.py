@@ -92,4 +92,12 @@ def login(body: Credentials, db: Session = Depends(get_db)) -> TokenOut:
     user = db.scalar(select(User).where(User.email == body.email.lower()))
     if user is None or not verify_password(body.password, user.password_hash):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid credentials")
+    # Keep review rights in sync with DBDOCTOR_ADMIN_EMAILS: computing is_admin
+    # only at register time meant adding an email to the admin list after signup
+    # never took effect. Reconcile on every login so the founder gets reviewer
+    # access without having to re-register.
+    should_admin = user.email in get_settings().admin_email_set
+    if user.is_admin != should_admin:
+        user.is_admin = should_admin
+        db.commit()
     return TokenOut(token=create_token(user), email=user.email, is_admin=user.is_admin)
