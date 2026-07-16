@@ -34,6 +34,7 @@ class JobOut(BaseModel):
     score: str | None
     error: str | None
     created_at: datetime
+    has_pdf: bool = False
 
     @classmethod
     def from_job(cls, job: AuditJob) -> JobOut:
@@ -46,6 +47,7 @@ class JobOut(BaseModel):
             score=job.score,
             error=job.error,
             created_at=job.created_at,
+            has_pdf=bool(job.report_path) and (Path(job.report_path) / "report.pdf").exists(),
         )
 
 
@@ -102,7 +104,12 @@ def run_pipeline(job_id: str) -> None:
             if settings.enable_pdf:
                 from report.pdf import html_to_pdf
 
-                html_to_pdf(html, job_dir / "report.pdf")
+                try:
+                    html_to_pdf(html, job_dir / "report.pdf")
+                except Exception as exc:
+                    # the PDF is a bolt-on artifact — a broken/missing browser
+                    # must never fail an audit whose HTML report succeeded
+                    job.error = f"PDF unavailable ({str(exc)[:300]}) — HTML report was generated"
             (job_dir / "tasks.md").write_text(tasks_markdown(result, ai_texts), encoding="utf-8")
             (job_dir / "findings.json").write_text(
                 result.model_dump_json(indent=2), encoding="utf-8"

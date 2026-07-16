@@ -17,6 +17,7 @@ export interface Job {
   score: string | null;
   error: string | null;
   created_at: string;
+  has_pdf: boolean;
 }
 
 export function getToken(): string | null {

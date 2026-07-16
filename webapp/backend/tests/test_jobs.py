@@ -82,6 +82,34 @@ def test_double_approval_rejected(client):
     assert client.post(f"/jobs/{job_id}/approve", headers=admin).status_code == 409
 
 
+def test_broken_pdf_renderer_does_not_fail_the_job(client, monkeypatch):
+    """A missing/broken Chromium (e.g. `playwright install` never run) must
+    degrade to an HTML-only report, never to a failed audit."""
+    import report.pdf
+    from webapp.backend.app.config import get_settings
+
+    monkeypatch.setenv("DBDOCTOR_ENABLE_PDF", "true")
+    get_settings.cache_clear()
+
+    def boom(html, out_path):
+        raise RuntimeError("BrowserType.launch: Executable doesn't exist")
+
+    monkeypatch.setattr(report.pdf, "html_to_pdf", boom)
+
+    headers = register(client, "dev@dbdoctor.io")
+    job_id = _upload(client, headers, FIXTURE.read_bytes()).json()["id"]
+
+    job = client.get(f"/jobs/{job_id}", headers=headers).json()
+    assert job["status"] == "review"  # not "failed"
+    assert job["has_pdf"] is False
+    assert "PDF unavailable" in job["error"]
+
+    admin = register(client, "founder@dbdoctor-admin.io")
+    client.post(f"/jobs/{job_id}/approve", headers=admin)
+    assert client.get(f"/jobs/{job_id}/report?fmt=html", headers=headers).status_code == 200
+    assert client.get(f"/jobs/{job_id}/report?fmt=pdf", headers=headers).status_code == 404
+
+
 def test_users_cannot_see_each_others_jobs(client):
     alice = register(client, "alice@dbdoctor.io")
     bob = register(client, "bob@dbdoctor.io")

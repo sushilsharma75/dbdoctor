@@ -123,10 +123,10 @@ export default function Dashboard() {
               {job.status === 'approved' && (
                 <>
                   <button
-                    onClick={() => downloadReport(job.id, 'pdf')}
+                    onClick={() => downloadReport(job.id, job.has_pdf ? 'pdf' : 'html')}
                     className="font-mono text-[11px] uppercase text-flag-info hover:underline"
                   >
-                    pdf
+                    {job.has_pdf ? 'pdf' : 'report'}
                   </button>
                   <button
                     onClick={() => downloadReport(job.id, 'tasks')}
