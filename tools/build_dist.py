@@ -29,8 +29,8 @@ MAIN_GUARD = 'if __name__ == "__main__":'
 
 
 def build(name: str) -> None:
-    src = (REPO / "collector" / name).read_text()
-    delta_src = (REPO / "collector" / "delta.py").read_text()
+    src = (REPO / "collector" / name).read_text(encoding="utf-8")
+    delta_src = (REPO / "collector" / "delta.py").read_text(encoding="utf-8")
     # __future__ imports are only legal at the top of a file
     delta_src = delta_src.replace("from __future__ import annotations\n", "")
 
@@ -47,7 +47,7 @@ def build(name: str) -> None:
     dist = REPO / "dist"
     dist.mkdir(exist_ok=True)
     out = dist / name
-    out.write_text(src)
+    out.write_text(src, encoding="utf-8")
     py_compile.compile(str(out), doraise=True)  # artifact must at least parse
 
     sha = hashlib.sha256(out.read_bytes()).hexdigest()

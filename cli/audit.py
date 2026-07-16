@@ -77,13 +77,13 @@ def main(snapshot_path, delta_path, client_alias, out_dir, skip_pdf, skip_ai, ai
     out.mkdir(parents=True, exist_ok=True)
 
     with _Stage("validate snapshot"):
-        raw = json.loads(Path(snapshot_path).read_text())
+        raw = json.loads(Path(snapshot_path).read_text(encoding="utf-8"))
 
     if delta_path:
         with _Stage("apply delta"):
             from collector.delta import apply_delta
 
-            raw = apply_delta(raw, json.loads(Path(delta_path).read_text()))
+            raw = apply_delta(raw, json.loads(Path(delta_path).read_text(encoding="utf-8")))
 
     snapshot = Snapshot.model_validate(raw)
 
@@ -102,7 +102,7 @@ def main(snapshot_path, delta_path, client_alias, out_dir, skip_pdf, skip_ai, ai
 
     with _Stage("render HTML"):
         html = render_report(result, snapshot, client_alias=client_alias, ai_texts=ai_texts)
-        (out / "report.html").write_text(html)
+        (out / "report.html").write_text(html, encoding="utf-8")
 
     if not skip_pdf:
         with _Stage("render PDF"):
@@ -111,8 +111,8 @@ def main(snapshot_path, delta_path, client_alias, out_dir, skip_pdf, skip_ai, ai
             html_to_pdf(html, out / "report.pdf")
 
     with _Stage("export tasks.md + findings.json"):
-        (out / "tasks.md").write_text(tasks_markdown(result, ai_texts))
-        (out / "findings.json").write_text(result.model_dump_json(indent=2))
+        (out / "tasks.md").write_text(tasks_markdown(result, ai_texts), encoding="utf-8")
+        (out / "findings.json").write_text(result.model_dump_json(indent=2), encoding="utf-8")
 
     click.echo(
         f"[audit] bundle written to {out}/ in {time.monotonic() - t_start:.1f}s "

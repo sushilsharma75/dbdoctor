@@ -431,10 +431,10 @@ def main(argv: list[str] | None = None) -> int:
         except ImportError:
             print("error: --delta-of requires delta.py next to this script", file=sys.stderr)
             return 1
-        with open(args.delta_of) as f:
+        with open(args.delta_of, encoding="utf-8") as f:
             snapshot = apply_delta(snapshot, json.load(f))
 
-    with open(args.out, "w") as f:
+    with open(args.out, "w", encoding="utf-8") as f:
         json.dump(snapshot, f, indent=2)
         f.write("\n")
 

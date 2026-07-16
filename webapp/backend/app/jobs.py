@@ -87,7 +87,9 @@ def run_pipeline(job_id: str) -> None:
             from report.tasks import tasks_markdown
 
             job_dir = _job_dir(job.id)
-            snapshot = Snapshot.model_validate(json.loads((job_dir / "snapshot.json").read_text()))
+            snapshot = Snapshot.model_validate(
+                json.loads((job_dir / "snapshot.json").read_text(encoding="utf-8"))
+            )
             result = run_all(snapshot)
 
             ai_texts: dict[str, str] = {}
@@ -96,13 +98,15 @@ def run_pipeline(job_id: str) -> None:
                 ai_texts = explainer.explain_all(result.score.top_findings)
 
             html = render_report(result, snapshot, client_alias=job.client_alias, ai_texts=ai_texts)
-            (job_dir / "report.html").write_text(html)
+            (job_dir / "report.html").write_text(html, encoding="utf-8")
             if settings.enable_pdf:
                 from report.pdf import html_to_pdf
 
                 html_to_pdf(html, job_dir / "report.pdf")
-            (job_dir / "tasks.md").write_text(tasks_markdown(result, ai_texts))
-            (job_dir / "findings.json").write_text(result.model_dump_json(indent=2))
+            (job_dir / "tasks.md").write_text(tasks_markdown(result, ai_texts), encoding="utf-8")
+            (job_dir / "findings.json").write_text(
+                result.model_dump_json(indent=2), encoding="utf-8"
+            )
 
             job.report_path = str(job_dir)
             job.score = str(result.score.score)

@@ -293,7 +293,7 @@ def _mark_paid(payment: Payment, provider_ref: str, db: Session) -> None:
     invoice_dir = Path(settings.data_dir) / "invoices"
     invoice_dir.mkdir(parents=True, exist_ok=True)
     html = render_invoice_html(payment, gst, settings)
-    (invoice_dir / f"{payment.invoice_number}.html").write_text(html)
+    (invoice_dir / f"{payment.invoice_number}.html").write_text(html, encoding="utf-8")
     if settings.enable_pdf:
         from report.pdf import html_to_pdf
 

@@ -138,7 +138,7 @@ class AiExplainer:
         """One grounded paragraph for *finding*; template text on any failure."""
         cache = self._cache_path(finding)
         if cache.exists():
-            return cache.read_text()
+            return cache.read_text(encoding="utf-8")
 
         client = self._get_client()
         if client is None:
@@ -154,7 +154,7 @@ class AiExplainer:
             return finding.suggested_action  # reject: fall back, never publish
 
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        cache.write_text(text)
+        cache.write_text(text, encoding="utf-8")
         return text
 
     def explain_all(self, findings: list[Finding]) -> dict[str, str]:

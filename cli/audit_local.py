@@ -19,7 +19,7 @@ SEV_ICON = {"CRITICAL": "!!", "HIGH": "! ", "MEDIUM": "~ ", "LOW": ". ", "INFO":
 
 
 def print_result(path: str) -> None:
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         snapshot = Snapshot.model_validate(json.load(f))
     result = run_all(snapshot)
 
