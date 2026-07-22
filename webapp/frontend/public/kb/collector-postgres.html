@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Collect a PostgreSQL snapshot · DBDoctor</title>
+  <meta name="description" content="Run pg_collect.py: prerequisites, the minimal read-only grants, DSN format, and command-line options." />
+  <link rel="stylesheet" href="/kb/kb.css" />
+</head>
+<body>
+  <header class="kb-header">
+    <div class="wrap">
+      <a class="brand" href="/"><span class="tile">db</span><span class="name">DBDoctor</span></a>
+      <nav>
+        <a href="/kb/index.html">Docs</a>
+        <a href="/new-audit">New audit</a>
+        <a href="/dashboard">Dashboard</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <p class="breadcrumb"><a href="/kb/index.html">Knowledge base</a> / Collect a PostgreSQL snapshot</p>
+    <p class="label">Collector · PostgreSQL</p>
+    <h1>Collect a PostgreSQL snapshot</h1>
+    <p class="lede">
+      <code>pg_collect.py</code> is a single, read-only Python file you run inside your
+      own environment. It produces the <code>snapshot.json</code> you upload for an audit.
+    </p>
+
+    <h2>Prerequisites</h2>
+    <ul>
+      <li>Python 3.10 or newer.</li>
+      <li>The PostgreSQL driver: <code>pip install "psycopg[binary]"</code>.</li>
+      <li>A read-only database role (see grants below).</li>
+      <li>Recommended: <a href="/kb/enable-pg-stat-statements.html">pg_stat_statements enabled</a> — the per-query findings, the most valuable part of the audit, need it.</li>
+    </ul>
+
+    <h2>Minimal read-only grants</h2>
+    <p>
+      The collector reads statistics and catalog views only. A role with the
+      built-in <code>pg_monitor</code> membership is the simplest way to grant exactly what
+      it needs and nothing more:
+    </p>
+    <pre><code>CREATE ROLE dbdoctor_ro LOGIN PASSWORD '...';
+GRANT pg_monitor TO dbdoctor_ro;</code></pre>
+    <p>
+      <code>pg_monitor</code> gives read access to <code>pg_stat_*</code> views (including full
+      query-statistics rows) without any access to your table data.
+    </p>
+
+    <h2>Run it</h2>
+    <p>Download the collector from the <a href="/new-audit">New audit</a> page, then:</p>
+    <pre><code>python pg_collect.py \
+  --dsn "postgresql://dbdoctor_ro:PASS@host:5432/yourdb" \
+  --out snapshot.json</code></pre>
+    <p>
+      On success it prints a summary line — how many queries and tables it captured
+      and which capabilities were available:
+    </p>
+    <pre><code>wrote snapshot.json  (queries=214, tables=63, capabilities=query_stats,index_usage,...)</code></pre>
+
+    <div class="note">
+      <span class="label">Verify what you ran</span>
+      The collector prints its own SHA256 at startup. Compare it against the
+      published hash to confirm the file is unmodified. Because it is a single file
+      with no repo dependencies, you can also read it top to bottom first.
+    </div>
+
+    <h2>Command-line options</h2>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Flag</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>--dsn</code></td><td>PostgreSQL DSN. May also be supplied via the <code>PGDSN</code> environment variable to keep it out of your shell history. Used for the connection only — never written to the snapshot.</td></tr>
+          <tr><td><code>--out</code></td><td>Output file path (default <code>snapshot.json</code>).</td></tr>
+          <tr><td><code>--delta-of PREV.json</code></td><td>Diff against a previous snapshot to add growth/rate fields (useful for tracking change over time).</td></tr>
+          <tr><td><code>--keep-names</code></td><td>Keep readable host/database names instead of hashing them to an alias. Off by default — hostnames are hashed unless you opt out.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note warn">
+      <span class="label">No query stats yet?</span>
+      If the capabilities line is missing <code>query_stats</code>, <code>pg_stat_statements</code>
+      is not enabled. Follow <a href="/kb/enable-pg-stat-statements.html">Enable pg_stat_statements</a>,
+      let a normal workload run for at least a day so statistics accumulate, then
+      re-run the collector.
+    </div>
+
+    <h2>Keep credentials out of your shell history</h2>
+    <pre><code>export PGDSN="postgresql://dbdoctor_ro:PASS@host:5432/yourdb"
+python pg_collect.py --out snapshot.json</code></pre>
+
+    <div class="article-nav">
+      <a href="/kb/security-and-privacy.html">← Security &amp; privacy</a>
+      <a href="/kb/collector-mysql.html">Collect a MySQL snapshot →</a>
+    </div>
+  </main>
+
+  <footer class="kb-footer">
+    <div class="wrap"><p class="label">DBDoctor · your credentials never leave your machine · reports reviewed by a human before delivery</p></div>
+  </footer>
+</body>
+</html>

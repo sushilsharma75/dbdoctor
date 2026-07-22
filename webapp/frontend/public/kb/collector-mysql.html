@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Collect a MySQL / MariaDB snapshot · DBDoctor</title>
+  <meta name="description" content="Run mysql_collect.py: prerequisites, read-only grants, DSN format, and MariaDB-specific caveats." />
+  <link rel="stylesheet" href="/kb/kb.css" />
+</head>
+<body>
+  <header class="kb-header">
+    <div class="wrap">
+      <a class="brand" href="/"><span class="tile">db</span><span class="name">DBDoctor</span></a>
+      <nav>
+        <a href="/kb/index.html">Docs</a>
+        <a href="/new-audit">New audit</a>
+        <a href="/dashboard">Dashboard</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <p class="breadcrumb"><a href="/kb/index.html">Knowledge base</a> / Collect a MySQL snapshot</p>
+    <p class="label">Collector · MySQL / MariaDB</p>
+    <h1>Collect a MySQL / MariaDB snapshot</h1>
+    <p class="lede">
+      <code>mysql_collect.py</code> is a single, read-only Python file you run inside your
+      own environment. It produces the <code>snapshot.json</code> you upload for an audit.
+    </p>
+
+    <h2>Prerequisites</h2>
+    <ul>
+      <li>Python 3.10 or newer.</li>
+      <li>The MySQL driver: <code>pip install pymysql</code>.</li>
+      <li>A read-only database account (see grants below).</li>
+      <li>Recommended: <a href="/kb/enable-performance-schema.html">performance_schema statement digests enabled</a> — needed for per-query findings. On MySQL 5.7/8.0 this is usually on by default; on MariaDB it is usually off.</li>
+    </ul>
+
+    <h2>Minimal read-only grants</h2>
+    <pre><code>CREATE USER 'dbdoctor_ro'@'%' IDENTIFIED BY '...';
+GRANT PROCESS, REPLICATION CLIENT ON *.* TO 'dbdoctor_ro'@'%';
+GRANT SELECT ON performance_schema.* TO 'dbdoctor_ro'@'%';
+GRANT SELECT ON sys.* TO 'dbdoctor_ro'@'%';   -- MySQL only
+GRANT EXECUTE ON sys.* TO 'dbdoctor_ro'@'%';  -- sys views call sys functions</code></pre>
+    <p>Statistics views only — the account never needs <code>SELECT</code> on your data.</p>
+
+    <h2>Run it</h2>
+    <p>Download the collector from the <a href="/new-audit">New audit</a> page, then:</p>
+    <pre><code>python mysql_collect.py \
+  --dsn "mysql://dbdoctor_ro:PASS@host:3306/yourdb" \
+  --out snapshot.json</code></pre>
+    <p>On success it prints a summary line with the captured counts and capabilities:</p>
+    <pre><code>wrote snapshot.json  (queries=180, tables=41, capabilities=query_stats,...)</code></pre>
+
+    <div class="note">
+      <span class="label">Verify what you ran</span>
+      The collector prints its own SHA256 at startup — compare it against the
+      published hash. It is a single file you can read end to end before running.
+    </div>
+
+    <h2>Command-line options</h2>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Flag</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>--dsn</code></td><td>DSN in the form <code>mysql://user:pass@host:3306/db</code>. May also be supplied via the <code>MYSQL_DSN</code> environment variable. Used for the connection only — never written to the snapshot.</td></tr>
+          <tr><td><code>--out</code></td><td>Output file path (default <code>snapshot.json</code>).</td></tr>
+          <tr><td><code>--delta-of PREV.json</code></td><td>Diff against a previous snapshot to add growth/rate fields.</td></tr>
+          <tr><td><code>--keep-names</code></td><td>Keep readable host/database names instead of hashing them to an alias. Off by default.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>MariaDB caveats</h2>
+    <ul>
+      <li><code>performance_schema</code> is <strong>off by default</strong> on MariaDB — you will almost always need to enable it first. See <a href="/kb/enable-performance-schema.html">the enablement guide</a>.</li>
+      <li>The <code>sys</code> schema advisor views (unused/redundant index and full-scan views) do not ship with MariaDB. The collector detects this, continues with reduced capabilities, and notes it in the snapshot; index findings are then derived from index definitions with reduced confidence.</li>
+      <li>Statement latency percentiles (p95/p99) are MySQL 8 only.</li>
+    </ul>
+
+    <div class="note warn">
+      <span class="label">No query stats yet?</span>
+      If the capabilities line is missing <code>query_stats</code>, statement digests are
+      off. The collector prints the exact fix; also see
+      <a href="/kb/enable-performance-schema.html">Enable performance_schema digests</a>.
+      Let a normal workload run for at least a day, then re-run the collector.
+    </div>
+
+    <div class="article-nav">
+      <a href="/kb/collector-postgres.html">← Collect a PostgreSQL snapshot</a>
+      <a href="/kb/enable-performance-schema.html">Enable performance_schema →</a>
+    </div>
+  </main>
+
+  <footer class="kb-footer">
+    <div class="wrap"><p class="label">DBDoctor · your credentials never leave your machine · reports reviewed by a human before delivery</p></div>
+  </footer>
+</body>
+</html>

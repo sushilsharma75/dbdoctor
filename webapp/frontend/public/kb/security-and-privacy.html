@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Security &amp; privacy model · DBDoctor</title>
+  <meta name="description" content="Exactly what data leaves your environment when you run the DBDoctor collector — and what never does." />
+  <link rel="stylesheet" href="/kb/kb.css" />
+</head>
+<body>
+  <header class="kb-header">
+    <div class="wrap">
+      <a class="brand" href="/"><span class="tile">db</span><span class="name">DBDoctor</span></a>
+      <nav>
+        <a href="/kb/index.html">Docs</a>
+        <a href="/new-audit">New audit</a>
+        <a href="/dashboard">Dashboard</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <p class="breadcrumb"><a href="/kb/index.html">Knowledge base</a> / Security &amp; privacy</p>
+    <p class="label">Security &amp; privacy</p>
+    <h1>What leaves your environment — and what never does</h1>
+    <p class="lede">
+      The whole product is built around one promise: your credentials and your data
+      stay on your side. Here is precisely how that holds.
+    </p>
+
+    <h2>We never receive your credentials</h2>
+    <p>
+      There is no connection string field anywhere in DBDoctor, and no agent that
+      phones home. The collector runs <em>inside your environment</em>, under an account
+      you control. DBDoctor never opens a session against your database — you do.
+    </p>
+
+    <div class="note ok">
+      <span class="label">The only thing you send us</span>
+      A single <code>snapshot.json</code> file that you generate locally and can inspect
+      byte-for-byte before uploading.
+    </div>
+
+    <h2>The collector is read-only, by construction</h2>
+    <ul>
+      <li>It opens a <strong>read-only</strong> session and reads statistics/catalog views only — never your table rows.</li>
+      <li>It contains <strong>no write statements</strong> of any kind. You can grep the single file to confirm this yourself before running it.</li>
+      <li>It prints its own <strong>SHA256</strong> at startup, so you can verify the file you ran is the file we published and hasn't been altered.</li>
+      <li>It needs only statistics grants — see the <a href="/kb/collector-postgres.html">PostgreSQL</a> and <a href="/kb/collector-mysql.html">MySQL</a> guides for the exact, minimal privileges.</li>
+    </ul>
+
+    <h2>Literals are stripped at the source</h2>
+    <p>
+      Query text is never captured raw. Both the database's own statistics views
+      (<code>pg_stat_statements</code>, <code>performance_schema</code> digests) and the collector
+      itself normalize statements so that every literal value is replaced by a
+      placeholder <em>before</em> anything is written to the snapshot.
+    </p>
+    <pre><code>-- what your app ran
+SELECT * FROM orders WHERE customer_id = 84213 AND status = 'shipped';
+
+-- what the snapshot contains
+SELECT * FROM orders WHERE customer_id = ? AND status = ?;</code></pre>
+    <p>
+      Because stripping happens on your machine, parameter values never leave it —
+      even transiently.
+    </p>
+
+    <h2>What the snapshot actually contains</h2>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Included</th><th>Not included</th></tr></thead>
+        <tbody>
+          <tr><td>Normalized query digests (literals as <code>?</code>)</td><td>Raw SQL with real values</td></tr>
+          <tr><td>Per-query call counts, mean/total time</td><td>Query parameter values</td></tr>
+          <tr><td>Table &amp; index sizes, row estimates, scan counts</td><td>Any table row data</td></tr>
+          <tr><td>Index definitions and usage statistics</td><td>Column values or samples</td></tr>
+          <tr><td>~25 whitelisted engine settings</td><td>Arbitrary config, secrets, passwords</td></tr>
+          <tr><td>Hashed host alias (by default)</td><td>Plaintext hostnames (unless you opt out)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>You can verify everything before uploading</h2>
+    <ol>
+      <li>Read the collector — it is one file, plainly written, with no repo dependencies beyond a single database driver.</li>
+      <li>Check the printed SHA256 against the published value.</li>
+      <li>Open <code>snapshot.json</code> in any editor. Everything we receive is in that file; nothing is hidden or sent separately.</li>
+    </ol>
+
+    <div class="note">
+      <span class="label">Settings whitelist</span>
+      The collector reads only an explicit allowlist of performance-relevant
+      settings (for example <code>shared_buffers</code>, <code>work_mem</code>,
+      <code>innodb_buffer_pool_size</code>). It does not sweep your full configuration, so
+      credentials, replication secrets, and unrelated parameters are never captured.
+    </div>
+
+    <div class="article-nav">
+      <a href="/kb/getting-started.html">← Getting started</a>
+      <a href="/kb/collector-postgres.html">Collect a PostgreSQL snapshot →</a>
+    </div>
+  </main>
+
+  <footer class="kb-footer">
+    <div class="wrap"><p class="label">DBDoctor · your credentials never leave your machine · reports reviewed by a human before delivery</p></div>
+  </footer>
+</body>
+</html>

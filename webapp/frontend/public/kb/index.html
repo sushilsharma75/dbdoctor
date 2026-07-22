@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Knowledge base · DBDoctor</title>
+  <meta name="description" content="Guides for running the DBDoctor collector, understanding your audit report, and enabling database statistics." />
+  <link rel="stylesheet" href="/kb/kb.css" />
+</head>
+<body>
+  <header class="kb-header">
+    <div class="wrap">
+      <a class="brand" href="/">
+        <span class="tile">db</span>
+        <span class="name">DBDoctor</span>
+      </a>
+      <nav>
+        <a href="/kb/index.html">Docs</a>
+        <a href="/new-audit">New audit</a>
+        <a href="/dashboard">Dashboard</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <p class="label">Knowledge base</p>
+    <h1>How DBDoctor works, end to end</h1>
+    <p class="lede">
+      Everything you need to run an audit: collect a sanitized snapshot from your
+      database, understand what leaves your machine, and read the report you get
+      back. Start with the first article if you are new.
+    </p>
+
+    <p class="label kb-section-label">Start here</p>
+    <div class="card-grid">
+      <a class="card" href="/kb/getting-started.html">
+        <div class="card-title">What DBDoctor is &amp; how it works</div>
+        <div class="card-desc">The three steps from a read-only script to an expert-reviewed report.</div>
+      </a>
+      <a class="card" href="/kb/security-and-privacy.html">
+        <div class="card-title">Security &amp; privacy model</div>
+        <div class="card-desc">Exactly what data leaves your environment — and what never does.</div>
+      </a>
+    </div>
+
+    <p class="label kb-section-label">Running the collector</p>
+    <div class="card-grid">
+      <a class="card" href="/kb/collector-postgres.html">
+        <div class="card-title">Collect a PostgreSQL snapshot</div>
+        <div class="card-desc">Run pg_collect.py, the read-only grants it needs, and the DSN format.</div>
+      </a>
+      <a class="card" href="/kb/collector-mysql.html">
+        <div class="card-title">Collect a MySQL / MariaDB snapshot</div>
+        <div class="card-desc">Run mysql_collect.py, grants, and MariaDB-specific caveats.</div>
+      </a>
+      <a class="card" href="/kb/enable-pg-stat-statements.html">
+        <div class="card-title">Enable pg_stat_statements</div>
+        <div class="card-desc">Turn on per-query statistics on RDS, Cloud SQL, or self-hosted PostgreSQL.</div>
+      </a>
+      <a class="card" href="/kb/enable-performance-schema.html">
+        <div class="card-title">Enable performance_schema digests</div>
+        <div class="card-desc">Turn on statement digests on MySQL and MariaDB.</div>
+      </a>
+    </div>
+
+    <p class="label kb-section-label">Reading your report</p>
+    <div class="card-grid">
+      <a class="card" href="/kb/understanding-your-report.html">
+        <div class="card-title">Understanding your report</div>
+        <div class="card-desc">The health score, category deductions, and the human review hold.</div>
+      </a>
+      <a class="card" href="/kb/findings-reference.html">
+        <div class="card-title">Findings reference</div>
+        <div class="card-desc">Every rule the engine checks, what triggers it, and why it matters.</div>
+      </a>
+    </div>
+
+    <p class="label kb-section-label">Help</p>
+    <div class="card-grid">
+      <a class="card" href="/kb/faq.html">
+        <div class="card-title">FAQ &amp; troubleshooting</div>
+        <div class="card-desc">Supported engines, common collector errors, and report downloads.</div>
+      </a>
+    </div>
+  </main>
+
+  <footer class="kb-footer">
+    <div class="wrap">
+      <p class="label">DBDoctor · your credentials never leave your machine · reports reviewed by a human before delivery</p>
+    </div>
+  </footer>
+</body>
+</html>

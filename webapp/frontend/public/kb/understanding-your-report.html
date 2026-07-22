@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Understanding your report · DBDoctor</title>
+  <meta name="description" content="How the DBDoctor health score is computed, what the category deductions mean, and the human review hold." />
+  <link rel="stylesheet" href="/kb/kb.css" />
+</head>
+<body>
+  <header class="kb-header">
+    <div class="wrap">
+      <a class="brand" href="/"><span class="tile">db</span><span class="name">DBDoctor</span></a>
+      <nav>
+        <a href="/kb/index.html">Docs</a>
+        <a href="/new-audit">New audit</a>
+        <a href="/dashboard">Dashboard</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <p class="breadcrumb"><a href="/kb/index.html">Knowledge base</a> / Understanding your report</p>
+    <p class="label">Your report</p>
+    <h1>Understanding your report</h1>
+    <p class="lede">
+      Your report opens with a 0–100 health score, then a prioritized list of
+      findings, each with the evidence that triggered it and a staging-first fix.
+      Here is how to read it.
+    </p>
+
+    <h2>The health score</h2>
+    <p>
+      The score is <strong>deterministic</strong> — the same snapshot always produces the
+      same number. It starts at 100 and deducts points for each finding by severity:
+    </p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Severity</th><th>Points deducted</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge badge-critical">Critical</span></td><td>15</td></tr>
+          <tr><td><span class="badge badge-warning">High</span></td><td>8</td></tr>
+          <tr><td><span class="badge badge-info">Medium</span></td><td>3</td></tr>
+          <tr><td><span class="badge badge-ok">Low</span></td><td>1</td></tr>
+          <tr><td><span class="badge">Info</span></td><td>0</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>Category caps</h2>
+    <p>
+      Deductions are capped per category, so one noisy area can never zero the score
+      on its own. The score also has a floor of <strong>5</strong> — a live database is
+      never a 0.
+    </p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Category</th><th>Maximum deduction</th></tr></thead>
+        <tbody>
+          <tr><td>Queries</td><td>30</td></tr>
+          <tr><td>Indexes</td><td>25</td></tr>
+          <tr><td>Ops (locks, connections, growth)</td><td>25</td></tr>
+          <tr><td>Config</td><td>20</td></tr>
+          <tr><td>Maintenance</td><td>15</td></tr>
+          <tr><td>Other</td><td>10</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      The score breakdown on the report shows the post-cap deduction per category —
+      e.g. <code>queries −18, indexes −10</code> — so you can see exactly where the points
+      went.
+    </p>
+
+    <h2>How findings are prioritized</h2>
+    <p>
+      Findings are ordered by severity first, then by estimated impact, then by
+      stable tie-breakers. The report highlights the top findings so you know what to
+      tackle first. Every finding includes:
+    </p>
+    <ul>
+      <li><strong>The evidence</strong> — the specific metric and value that triggered the rule (e.g. "this query is 34% of total database time").</li>
+      <li><strong>Why it matters</strong> — the performance consequence in plain language.</li>
+      <li><strong>A suggested action</strong> — a concrete, staging-first fix.</li>
+    </ul>
+    <p>See the <a href="/kb/findings-reference.html">Findings reference</a> for the full rule catalog.</p>
+
+    <div class="note">
+      <span class="label">Numbers you can trust</span>
+      When AI narration is enabled, it may only rephrase evidence the rule engine
+      already produced. A digit guard rejects any narration that introduces a number
+      not present in the evidence, so the prose can never invent a metric.
+    </div>
+
+    <h2>The human review hold</h2>
+    <p>
+      No report is delivered automatically. After the engine runs, your audit is held
+      in <strong>expert review</strong> — a human checks it before it is released to you.
+      On your dashboard you'll see the status move through:
+    </p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge">queued</span></td><td>Snapshot received, waiting to be analyzed.</td></tr>
+          <tr><td><span class="badge badge-info">analyzing…</span></td><td>The rule engine is running.</td></tr>
+          <tr><td><span class="badge badge-warning">expert review in progress</span></td><td>Held for human review — usually released within one business day.</td></tr>
+          <tr><td><span class="badge badge-ok">ready</span></td><td>Approved and available to download.</td></tr>
+          <tr><td><span class="badge badge-critical">failed</span></td><td>Something went wrong; the error is shown on the row. See the <a href="/kb/faq.html">FAQ</a>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>What you download</h2>
+    <ul>
+      <li><strong>Report (PDF or HTML)</strong> — the full audit: score, findings, evidence, and fixes.</li>
+      <li><strong>tasks.md</strong> — the same findings as paste-ready tickets for GitHub, Jira, or your tracker.</li>
+    </ul>
+    <p>
+      If PDF rendering isn't available in your deployment, the dashboard offers the
+      identical HTML report instead — the content is the same.
+    </p>
+
+    <div class="article-nav">
+      <a href="/kb/index.html">← Knowledge base</a>
+      <a href="/kb/findings-reference.html">Findings reference →</a>
+    </div>
+  </main>
+
+  <footer class="kb-footer">
+    <div class="wrap"><p class="label">DBDoctor · your credentials never leave your machine · reports reviewed by a human before delivery</p></div>
+  </footer>
+</body>
+</html>

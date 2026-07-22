@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Enable pg_stat_statements · DBDoctor</title>
+  <meta name="description" content="Turn on PostgreSQL per-query statistics on Amazon RDS/Aurora, Google Cloud SQL, or self-hosted PostgreSQL." />
+  <link rel="stylesheet" href="/kb/kb.css" />
+</head>
+<body>
+  <header class="kb-header">
+    <div class="wrap">
+      <a class="brand" href="/"><span class="tile">db</span><span class="name">DBDoctor</span></a>
+      <nav>
+        <a href="/kb/index.html">Docs</a>
+        <a href="/new-audit">New audit</a>
+        <a href="/dashboard">Dashboard</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <p class="breadcrumb"><a href="/kb/index.html">Knowledge base</a> / Enable pg_stat_statements</p>
+    <p class="label">PostgreSQL statistics</p>
+    <h1>Enable pg_stat_statements</h1>
+    <p class="lede">
+      <code>pg_stat_statements</code> is PostgreSQL's built-in per-statement statistics
+      extension. The collector works without it, but the per-query findings — the
+      most valuable part of the audit — need it. It ships with PostgreSQL, adds
+      negligible overhead, and is widely run in production.
+    </p>
+
+    <div class="note ok">
+      <span class="label">Privacy</span>
+      It stores <strong>normalized</strong> statements (literals already replaced by
+      <code>$1</code>, <code>$2</code>), so enabling it does not put query parameter values anywhere.
+    </div>
+
+    <h2>Amazon RDS / Aurora PostgreSQL</h2>
+    <ol>
+      <li>In the instance's <strong>DB parameter group</strong>, set:
+        <pre><code>shared_preload_libraries = 'pg_stat_statements'</code></pre>
+        (On many RDS engine versions it is already preloaded — check first.)
+      </li>
+      <li>Reboot the instance (required for <code>shared_preload_libraries</code> changes).</li>
+      <li>In your database, run once:
+        <pre><code>CREATE EXTENSION pg_stat_statements;</code></pre>
+      </li>
+    </ol>
+
+    <h2>Google Cloud SQL</h2>
+    <ol>
+      <li>Set the flag (triggers a restart):
+        <pre><code>gcloud sql instances patch INSTANCE_NAME \
+  --database-flags=shared_preload_libraries=pg_stat_statements</code></pre>
+      </li>
+      <li>Then in your database:
+        <pre><code>CREATE EXTENSION pg_stat_statements;</code></pre>
+      </li>
+    </ol>
+
+    <h2>Self-hosted</h2>
+    <ol>
+      <li>In <code>postgresql.conf</code>:
+        <pre><code>shared_preload_libraries = 'pg_stat_statements'</code></pre>
+      </li>
+      <li>Restart PostgreSQL.</li>
+      <li>In your database:
+        <pre><code>CREATE EXTENSION pg_stat_statements;</code></pre>
+      </li>
+    </ol>
+
+    <h2>Afterwards</h2>
+    <p>
+      Let your normal workload run for at least a day so statistics accumulate, then
+      re-run the collector:
+    </p>
+    <pre><code>python pg_collect.py --dsn postgresql://... --out snapshot.json</code></pre>
+    <p>The collector's startup output should now include <code>query_stats</code> in its capabilities list.</p>
+
+    <h2>Optional: track_io_timing</h2>
+    <p>For I/O-timing evidence in future audits (small measurement overhead, generally safe on modern hardware):</p>
+    <pre><code>ALTER SYSTEM SET track_io_timing = on;
+SELECT pg_reload_conf();</code></pre>
+
+    <div class="article-nav">
+      <a href="/kb/collector-postgres.html">← Collect a PostgreSQL snapshot</a>
+      <a href="/kb/understanding-your-report.html">Understanding your report →</a>
+    </div>
+  </main>
+
+  <footer class="kb-footer">
+    <div class="wrap"><p class="label">DBDoctor · your credentials never leave your machine · reports reviewed by a human before delivery</p></div>
+  </footer>
+</body>
+</html>

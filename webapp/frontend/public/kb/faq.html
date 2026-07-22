@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FAQ &amp; troubleshooting · DBDoctor</title>
+  <meta name="description" content="Supported engines, common collector and upload errors, report download issues, and how DBDoctor handles your data." />
+  <link rel="stylesheet" href="/kb/kb.css" />
+</head>
+<body>
+  <header class="kb-header">
+    <div class="wrap">
+      <a class="brand" href="/"><span class="tile">db</span><span class="name">DBDoctor</span></a>
+      <nav>
+        <a href="/kb/index.html">Docs</a>
+        <a href="/new-audit">New audit</a>
+        <a href="/dashboard">Dashboard</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <p class="breadcrumb"><a href="/kb/index.html">Knowledge base</a> / FAQ &amp; troubleshooting</p>
+    <p class="label">FAQ &amp; troubleshooting</p>
+    <h1>Frequently asked questions</h1>
+
+    <h2>General</h2>
+
+    <h3>Which engines and versions are supported?</h3>
+    <p>
+      PostgreSQL 13+ (including RDS, Aurora, and Cloud SQL) and MySQL 8 / MariaDB.
+      The collector degrades gracefully when optional statistics are missing and
+      tells you exactly how to enable them.
+    </p>
+
+    <h3>Do you need access to my database?</h3>
+    <p>
+      No. You run the collector yourself, inside your environment. It connects with a
+      read-only session, reads statistics views only (never table data), and prints
+      its own SHA256 so you can verify what you executed. See
+      <a href="/kb/security-and-privacy.html">Security &amp; privacy</a>.
+    </p>
+
+    <h3>What data leaves my environment?</h3>
+    <p>
+      A single JSON file of normalized metrics — query shapes with every literal
+      replaced by <code>?</code>, table/index statistics, and a whitelist of settings.
+      Hostnames are hashed by default. You can open the file and read every byte
+      before uploading.
+    </p>
+
+    <h3>Is this automated advice?</h3>
+    <p>
+      Findings come from deterministic rules with named numeric evidence, and every
+      report is reviewed by a human before delivery. Recommendations always come with
+      a staging-first test plan; nothing touches your database automatically.
+    </p>
+
+    <h2>Collector problems</h2>
+
+    <h3>The capabilities line is missing <code>query_stats</code></h3>
+    <p>
+      Per-query statistics aren't enabled. This is the single most valuable input, so
+      it's worth turning on:
+    </p>
+    <ul>
+      <li>PostgreSQL → <a href="/kb/enable-pg-stat-statements.html">Enable pg_stat_statements</a></li>
+      <li>MySQL / MariaDB → <a href="/kb/enable-performance-schema.html">Enable performance_schema digests</a></li>
+    </ul>
+    <p>After enabling, let a normal workload run for at least a day, then re-run the collector.</p>
+
+    <h3><code>ModuleNotFoundError</code> for psycopg or pymysql</h3>
+    <p>The database driver isn't installed. Install the one for your engine:</p>
+    <pre><code>pip install "psycopg[binary]"   # PostgreSQL
+pip install pymysql             # MySQL / MariaDB</code></pre>
+
+    <h3>Permission denied reading statistics views</h3>
+    <p>
+      The collector account is missing statistics grants. Use the minimal read-only
+      grants in the <a href="/kb/collector-postgres.html">PostgreSQL</a> or
+      <a href="/kb/collector-mysql.html">MySQL</a> guide. The account never needs
+      <code>SELECT</code> on your data.
+    </p>
+
+    <h2>Upload &amp; report problems</h2>
+
+    <h3>"not a valid dbdoctor snapshot" on upload</h3>
+    <p>
+      The file wasn't produced by a current collector, or was edited after
+      generation. Regenerate it with <code>pg_collect.py</code> or
+      <code>mysql_collect.py</code> and upload it unmodified. The maximum upload size is
+      50&nbsp;MB.
+    </p>
+
+    <h3>My audit shows "failed" with a <code>'charmap' codec can't encode…</code> error</h3>
+    <p>
+      This was a bug in an older build on Windows hosts (the default text encoding
+      couldn't represent the minus sign used in the score breakdown). It's fixed —
+      all report I/O is now written as UTF-8. Update to the latest build, restart the
+      backend, and re-upload the snapshot. Previously failed jobs don't retry
+      themselves.
+    </p>
+
+    <h3>The report shows a "report" button instead of "pdf"</h3>
+    <p>
+      PDF rendering uses a headless Chromium that is a separate download from the
+      Python package. When it isn't installed, the audit still completes and you get
+      the identical <strong>HTML report</strong> instead — the content is the same. To
+      enable PDFs on the server, run once:
+    </p>
+    <pre><code>python -m playwright install chromium</code></pre>
+    <p>
+      Alternatively the server can disable PDF rendering entirely
+      (<code>DBDOCTOR_ENABLE_PDF=false</code>) and rely on the HTML report. A PDF failure
+      never fails an audit whose report was generated.
+    </p>
+
+    <h3>My report is stuck in "expert review in progress"</h3>
+    <p>
+      That's expected — every report is held for human review before release, usually
+      within one business day. Once approved, the status flips to <strong>ready</strong> and
+      the download buttons appear.
+    </p>
+
+    <h2>Still stuck?</h2>
+    <p>
+      Start a new audit from the <a href="/new-audit">New audit</a> page, or review the
+      <a href="/kb/understanding-your-report.html">report guide</a>. The collector prints
+      a precise fix for most misconfigurations it detects.
+    </p>
+
+    <div class="article-nav">
+      <a href="/kb/findings-reference.html">← Findings reference</a>
+      <a href="/kb/index.html">Knowledge base →</a>
+    </div>
+  </main>
+
+  <footer class="kb-footer">
+    <div class="wrap"><p class="label">DBDoctor · your credentials never leave your machine · reports reviewed by a human before delivery</p></div>
+  </footer>
+</body>
+</html>

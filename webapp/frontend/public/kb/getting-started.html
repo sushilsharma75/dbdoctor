@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>What DBDoctor is &amp; how it works · DBDoctor</title>
+  <meta name="description" content="The three steps from a read-only collector script to an expert-reviewed database performance report." />
+  <link rel="stylesheet" href="/kb/kb.css" />
+</head>
+<body>
+  <header class="kb-header">
+    <div class="wrap">
+      <a class="brand" href="/"><span class="tile">db</span><span class="name">DBDoctor</span></a>
+      <nav>
+        <a href="/kb/index.html">Docs</a>
+        <a href="/new-audit">New audit</a>
+        <a href="/dashboard">Dashboard</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <p class="breadcrumb"><a href="/kb/index.html">Knowledge base</a> / Getting started</p>
+    <p class="label">Getting started</p>
+    <h1>What DBDoctor is &amp; how it works</h1>
+    <p class="lede">
+      DBDoctor turns one sanitized statistics snapshot from your PostgreSQL or
+      MySQL database into a prioritized, evidence-backed performance audit — without
+      anyone ever touching your credentials or your data.
+    </p>
+
+    <h2>The core idea</h2>
+    <p>
+      Most performance tools ask you to hand over a connection string or install an
+      agent that talks to a third party. DBDoctor does neither. <strong>You</strong> run a
+      single, readable Python script inside your own environment. It opens a
+      read-only session, reads statistics views only, strips every literal value at
+      the source, and writes a <code>snapshot.json</code> file. You upload that file — and
+      only that file — to get your report.
+    </p>
+
+    <h2>The three steps</h2>
+
+    <div class="panel">
+      <p class="label">Step 01</p>
+      <h3>You run one read-only script</h3>
+      <p>
+        Download a single Python file — <code>pg_collect.py</code> or
+        <code>mysql_collect.py</code> — that you can read in about ten minutes. It connects
+        with a read-only session, collects statistics views only (never table data),
+        and prints its own SHA256 so you can verify exactly what you executed. See
+        <a href="/kb/collector-postgres.html">Collect a PostgreSQL snapshot</a> or
+        <a href="/kb/collector-mysql.html">Collect a MySQL snapshot</a>.
+      </p>
+    </div>
+
+    <div class="panel">
+      <p class="label">Step 02</p>
+      <h3>You upload the sanitized snapshot</h3>
+      <p>
+        The snapshot is normalized metrics: query digests (with literals already
+        replaced by <code>?</code>), table and index sizes, index usage counts, and a
+        short list of whitelisted settings. No row data, no parameter values,
+        hostnames hashed by default. You can open the file in any editor and read
+        every byte before uploading.
+      </p>
+    </div>
+
+    <div class="panel">
+      <p class="label">Step 03</p>
+      <h3>You get an expert-reviewed report</h3>
+      <p>
+        A deterministic rule engine produces prioritized findings, each backed by
+        named numeric evidence, and computes a 0–100 health score. A human reviews
+        every report before it is released to you. You receive an HTML/PDF report
+        plus a <code>tasks.md</code> of paste-ready tickets for your tracker. See
+        <a href="/kb/understanding-your-report.html">Understanding your report</a>.
+      </p>
+    </div>
+
+    <h2>What makes the findings trustworthy</h2>
+    <ul>
+      <li><strong>Deterministic rules, not guesses.</strong> Findings come from explicit rules with tunable thresholds — the same snapshot always produces the same report.</li>
+      <li><strong>Evidence-backed numbers.</strong> Every finding cites the metric that triggered it. The optional AI narration may only rephrase those numbers, never invent new ones.</li>
+      <li><strong>Human review hold.</strong> No report is auto-delivered. Each one is held for expert review — usually released within one business day.</li>
+      <li><strong>Staging-first fixes.</strong> Recommendations always come with a test plan; nothing touches your database automatically.</li>
+    </ul>
+
+    <h2>Which databases are supported</h2>
+    <p>
+      PostgreSQL 13+ (including RDS, Aurora, and Cloud SQL) and MySQL 8 / MariaDB.
+      The collector degrades gracefully when optional statistics are missing and
+      tells you exactly how to enable them. See the
+      <a href="/kb/faq.html">FAQ</a> for details.
+    </p>
+
+    <div class="article-nav">
+      <a href="/kb/index.html">← Knowledge base</a>
+      <a href="/kb/security-and-privacy.html">Security &amp; privacy →</a>
+    </div>
+  </main>
+
+  <footer class="kb-footer">
+    <div class="wrap"><p class="label">DBDoctor · your credentials never leave your machine · reports reviewed by a human before delivery</p></div>
+  </footer>
+</body>
+</html>

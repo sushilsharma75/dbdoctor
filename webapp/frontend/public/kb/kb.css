@@ -1,0 +1,265 @@
+/* DBDoctor knowledge base — standalone styling in the POSTMORTEM design
+   language. Self-contained (system font stacks, no external assets) so every
+   article renders correctly whether served by the app or opened directly. */
+
+:root {
+  --ink-950: #070d1a;
+  --ink-900: #0b1424;
+  --ink-800: #101d33;
+  --ink-700: #1a2942;
+  --ink-600: #24395c;
+  --ink-500: #36507d;
+  --bone-50: #fafaf9;
+  --bone-100: #f5f5f4;
+  --bone-200: #e7e5e4;
+  --bone-300: #d6d3d1;
+  --bone-400: #a8a29e;
+  --bone-500: #78716c;
+  --bone-600: #57534e;
+  --flag-critical: #ef4444;
+  --flag-warning: #f59e0b;
+  --flag-info: #60a5fa;
+  --flag-ok: #10b981;
+  --sans: "Geist", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--bone-300);
+  background-color: var(--ink-950);
+  background-image:
+    radial-gradient(60rem 60rem at 15% -10%, rgba(54, 80, 125, 0.20), transparent 60%),
+    radial-gradient(50rem 50rem at 100% 0%, rgba(37, 57, 92, 0.18), transparent 55%),
+    radial-gradient(70rem 70rem at 50% 120%, rgba(26, 41, 66, 0.25), transparent 60%),
+    linear-gradient(180deg, var(--ink-950), var(--ink-900));
+  background-attachment: fixed;
+}
+
+.wrap { max-width: 60rem; margin: 0 auto; padding: 0 1.25rem; }
+
+/* -- header / footer ----------------------------------------------------- */
+.kb-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(12px);
+  background: rgba(11, 20, 36, 0.72);
+  border-bottom: 1px solid rgba(36, 57, 92, 0.4);
+}
+.kb-header .wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 3.5rem;
+}
+.brand { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; }
+.brand .tile {
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 6px;
+  background: var(--flag-warning);
+  color: var(--ink-950);
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 12px;
+}
+.brand .name {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bone-100);
+}
+.kb-header nav a {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--bone-400);
+  text-decoration: none;
+  margin-left: 1.25rem;
+}
+.kb-header nav a:hover { color: var(--bone-100); }
+
+footer.kb-footer {
+  margin-top: 4rem;
+  border-top: 1px solid rgba(36, 57, 92, 0.4);
+  padding: 2rem 0 3rem;
+}
+footer.kb-footer .label { margin: 0; }
+
+/* -- typography ---------------------------------------------------------- */
+main { padding: 2.5rem 0; }
+h1 {
+  font-size: 2rem;
+  font-weight: 300;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--bone-50);
+  margin: 0 0 0.5rem;
+}
+h2 {
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--bone-100);
+  margin: 2.5rem 0 0.75rem;
+  padding-top: 0.5rem;
+}
+h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--bone-100);
+  margin: 1.75rem 0 0.5rem;
+}
+p { margin: 0.75rem 0; }
+a { color: var(--flag-info); text-decoration: none; }
+a:hover { text-decoration: underline; }
+strong { color: var(--bone-100); font-weight: 600; }
+ul, ol { margin: 0.75rem 0; padding-left: 1.4rem; }
+li { margin: 0.35rem 0; }
+li::marker { color: var(--bone-500); }
+
+.label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--bone-500);
+}
+.lede {
+  font-size: 1.05rem;
+  color: var(--bone-300);
+  max-width: 44rem;
+  margin: 0.75rem 0 0;
+}
+
+/* -- code ---------------------------------------------------------------- */
+code {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  color: var(--bone-200);
+  background: rgba(36, 57, 92, 0.35);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+}
+pre {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--bone-200);
+  background: rgba(7, 13, 26, 0.6);
+  border: 1px solid rgba(36, 57, 92, 0.5);
+  border-radius: 8px;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+pre code { background: none; padding: 0; color: inherit; font-size: inherit; }
+
+/* -- panels / callouts --------------------------------------------------- */
+.panel {
+  background: rgba(11, 20, 36, 0.55);
+  border: 1px solid rgba(36, 57, 92, 0.45);
+  border-radius: 10px;
+  padding: 1.25rem 1.4rem;
+  margin: 1.25rem 0;
+}
+.note {
+  border-left: 3px solid var(--flag-info);
+  background: rgba(96, 165, 250, 0.08);
+  border-radius: 0 8px 8px 0;
+  padding: 0.85rem 1.1rem;
+  margin: 1.25rem 0;
+  font-size: 0.95em;
+}
+.note.warn { border-left-color: var(--flag-warning); background: rgba(245, 158, 11, 0.08); }
+.note.ok { border-left-color: var(--flag-ok); background: rgba(16, 185, 129, 0.08); }
+.note .label { display: block; margin-bottom: 0.3rem; }
+
+/* -- tables -------------------------------------------------------------- */
+.table-scroll { overflow-x: auto; margin: 1.25rem 0; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92em; }
+th, td {
+  text-align: left;
+  padding: 0.6rem 0.85rem;
+  border-bottom: 1px solid rgba(36, 57, 92, 0.4);
+  vertical-align: top;
+}
+th {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--bone-500);
+  font-weight: 400;
+}
+td code { white-space: nowrap; }
+
+/* -- badges -------------------------------------------------------------- */
+.badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.15em 0.55em;
+  border-radius: 999px;
+  border: 1px solid;
+}
+.badge-critical { color: var(--flag-critical); border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.1); }
+.badge-warning { color: var(--flag-warning); border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.1); }
+.badge-info { color: var(--flag-info); border-color: rgba(96, 165, 250, 0.4); background: rgba(96, 165, 250, 0.1); }
+.badge-ok { color: var(--flag-ok); border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.1); }
+
+/* -- index cards --------------------------------------------------------- */
+.kb-section-label { margin: 2.5rem 0 1rem; }
+.card-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); }
+a.card {
+  display: block;
+  text-decoration: none;
+  background: rgba(11, 20, 36, 0.55);
+  border: 1px solid rgba(36, 57, 92, 0.45);
+  border-radius: 10px;
+  padding: 1.1rem 1.2rem;
+  transition: border-color 0.15s, transform 0.15s;
+}
+a.card:hover { border-color: rgba(245, 158, 11, 0.5); transform: translateY(-2px); text-decoration: none; }
+a.card .card-title { color: var(--bone-100); font-weight: 600; font-size: 0.98rem; }
+a.card .card-desc { color: var(--bone-400); font-size: 0.88rem; margin-top: 0.3rem; line-height: 1.5; }
+
+/* -- article nav (prev/next + back) -------------------------------------- */
+.article-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(36, 57, 92, 0.4);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.breadcrumb {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--bone-500);
+  margin-bottom: 1.25rem;
+}
+.breadcrumb a { color: var(--bone-400); }
+.toc { font-size: 0.92em; }
+.toc a { color: var(--bone-300); }

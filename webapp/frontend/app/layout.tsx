@@ -23,6 +23,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </span>
             </Link>
             <div className="flex items-center gap-x-6 font-mono text-[11px] uppercase tracking-wider">
+              <a href="/kb/index.html" className="text-bone-400 hover:text-bone-200">
+                Docs
+              </a>
               <Link href="/new-audit" className="text-bone-400 hover:text-bone-200">
                 New audit
               </Link>

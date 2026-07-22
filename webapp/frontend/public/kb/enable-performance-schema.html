@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Enable performance_schema digests · DBDoctor</title>
+  <meta name="description" content="Turn on MySQL/MariaDB statement digest statistics so the collector can report per-query findings." />
+  <link rel="stylesheet" href="/kb/kb.css" />
+</head>
+<body>
+  <header class="kb-header">
+    <div class="wrap">
+      <a class="brand" href="/"><span class="tile">db</span><span class="name">DBDoctor</span></a>
+      <nav>
+        <a href="/kb/index.html">Docs</a>
+        <a href="/new-audit">New audit</a>
+        <a href="/dashboard">Dashboard</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <p class="breadcrumb"><a href="/kb/index.html">Knowledge base</a> / Enable performance_schema digests</p>
+    <p class="label">MySQL / MariaDB statistics</p>
+    <h1>Enable performance_schema statement digests</h1>
+    <p class="lede">
+      The collector reads per-query statistics from
+      <code>performance_schema.events_statements_summary_by_digest</code>. On MySQL 5.7/8.0
+      this is <strong>on by default</strong> — you usually don't need to do anything. This
+      guide covers the cases where it isn't.
+    </p>
+
+    <div class="note ok">
+      <span class="label">Privacy</span>
+      Digest statistics store <strong>normalized</strong> statements (literals already
+      replaced by <code>?</code>), so enabling them does not record query parameter values
+      anywhere.
+    </div>
+
+    <h2>Check current state</h2>
+    <pre><code>SELECT @@performance_schema;                       -- must be 1
+SELECT NAME, ENABLED FROM performance_schema.setup_consumers
+ WHERE NAME = 'statements_digest';                 -- must be YES</code></pre>
+    <p>The collector runs this same check itself and prints the exact fix if anything is off.</p>
+
+    <h2>Fix 1 — consumers disabled (no restart needed)</h2>
+    <pre><code>UPDATE performance_schema.setup_consumers
+   SET ENABLED = 'YES'
+ WHERE NAME IN ('statements_digest', 'global_instrumentation',
+                'thread_instrumentation');</code></pre>
+
+    <h2>Fix 2 — performance_schema off entirely (restart needed)</h2>
+    <p>Add to <code>my.cnf</code> under <code>[mysqld]</code>, then restart:</p>
+    <pre><code>performance_schema = ON
+performance-schema-consumer-statements-digest = ON</code></pre>
+    <p>On managed platforms set the equivalent parameter:</p>
+    <ul>
+      <li><strong>Amazon RDS / Aurora MySQL:</strong> set <code>performance_schema = 1</code> in the DB parameter group and reboot.</li>
+      <li><strong>Google Cloud SQL for MySQL:</strong> <code>gcloud sql instances patch INSTANCE --database-flags=performance_schema=on</code></li>
+    </ul>
+
+    <h2>MariaDB notes</h2>
+    <ul>
+      <li>On MariaDB, <code>performance_schema</code> is <strong>OFF by default</strong> — Fix 2 is almost always required.</li>
+      <li>The <code>sys</code> schema advisor views (<code>schema_unused_indexes</code>, <code>schema_redundant_indexes</code>, full-scan views) do not ship with MariaDB. The collector detects this, continues with reduced capabilities, and notes it in the snapshot — index findings are then derived from index definitions downstream with reduced confidence.</li>
+      <li>Statement latency percentiles (p95/p99) are MySQL 8 only.</li>
+    </ul>
+
+    <h2>Afterwards</h2>
+    <p>Let your normal workload run for at least a day so statistics accumulate, then re-run the collector:</p>
+    <pre><code>python mysql_collect.py --dsn mysql://... --out snapshot.json</code></pre>
+    <p>The collector's startup output should now include <code>query_stats</code> in its capabilities list.</p>
+
+    <div class="article-nav">
+      <a href="/kb/collector-mysql.html">← Collect a MySQL snapshot</a>
+      <a href="/kb/understanding-your-report.html">Understanding your report →</a>
+    </div>
+  </main>
+
+  <footer class="kb-footer">
+    <div class="wrap"><p class="label">DBDoctor · your credentials never leave your machine · reports reviewed by a human before delivery</p></div>
+  </footer>
+</body>
+</html>

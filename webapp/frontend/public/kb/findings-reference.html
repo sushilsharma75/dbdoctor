@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Findings reference · DBDoctor</title>
+  <meta name="description" content="Every rule the DBDoctor engine checks — what triggers each finding, its category, and why it matters." />
+  <link rel="stylesheet" href="/kb/kb.css" />
+</head>
+<body>
+  <header class="kb-header">
+    <div class="wrap">
+      <a class="brand" href="/"><span class="tile">db</span><span class="name">DBDoctor</span></a>
+      <nav>
+        <a href="/kb/index.html">Docs</a>
+        <a href="/new-audit">New audit</a>
+        <a href="/dashboard">Dashboard</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <p class="breadcrumb"><a href="/kb/index.html">Knowledge base</a> / Findings reference</p>
+    <p class="label">Findings reference</p>
+    <h1>What the engine checks</h1>
+    <p class="lede">
+      Every finding in your report comes from one of these deterministic rules. Each
+      cites the exact metric that triggered it; severity scales with the size of the
+      problem. Thresholds are tunable and calibrated to avoid false positives.
+    </p>
+
+    <h2><span class="badge badge-warning">Queries</span> Query rules</h2>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Rule</th><th>Finding</th><th>Triggers when</th></tr></thead>
+        <tbody>
+          <tr><td><code>R-Q1</code></td><td>One query consumes a large share of total database time</td><td>A single query digest accounts for ≥20% of total database time (escalates to critical at ≥40%). The highest-leverage query to fix first.</td></tr>
+          <tr><td><code>R-Q2</code></td><td>Query is slow on every execution</td><td>Mean latency is high (≈1s+) on every call; severity scales with call volume.</td></tr>
+          <tr><td><code>R-Q3</code></td><td>Query runs at very high frequency</td><td>A query is called extremely often (tens of thousands of times a day+), so even a small per-call cost compounds.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2><span class="badge badge-info">Indexes</span> Index rules</h2>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Rule</th><th>Finding</th><th>Triggers when</th></tr></thead>
+        <tbody>
+          <tr><td><code>R-I1</code></td><td>Table is scanned in full by frequent queries (missing index candidate)</td><td>A large table (≥100&nbsp;MB) takes many sequential scans, or reads far more rows than it returns. The headline finding of most audits.</td></tr>
+          <tr><td><code>R-I2</code></td><td>Index is never used but costs space and write time</td><td>An index of meaningful size (≥20&nbsp;MB) has effectively zero reads — pure overhead on every write.</td></tr>
+          <tr><td><code>R-I3</code></td><td>Redundant index duplicates another index's leading columns</td><td>One index's columns are a leading-prefix subset of another, so it can usually be dropped.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2><span class="badge badge-critical">Ops</span> Operational-risk rules</h2>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Rule</th><th>Finding</th><th>Triggers when</th></tr></thead>
+        <tbody>
+          <tr><td><code>R-L1</code></td><td>Sessions were blocked waiting on locks</td><td>Lock waits exceeded a multi-second threshold — a sign of contention that stalls users.</td></tr>
+          <tr><td><code>R-C1</code></td><td>Connection usage is close to the configured limit</td><td>Peak connections reached ≥80% of the limit (critical at ≥90%) — headroom risk before connection errors.</td></tr>
+          <tr><td><code>R-G1</code></td><td>Table is growing fast</td><td>A large table grew by ≥25% over the comparison window — capacity and future-performance signal (needs a delta snapshot).</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2><span class="badge badge-ok">Maintenance</span> Maintenance rules</h2>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Rule</th><th>Finding</th><th>Triggers when</th></tr></thead>
+        <tbody>
+          <tr><td><code>R-M1</code></td><td>Dead tuples accumulating faster than vacuum reclaims (PostgreSQL)</td><td>Dead-tuple ratio on a sizeable table is high — vacuum is falling behind.</td></tr>
+          <tr><td><code>R-M2</code></td><td>Autovacuum disabled or never processed an active table (PostgreSQL)</td><td>An active table has never been vacuumed, or autovacuum is off.</td></tr>
+          <tr><td><code>R-M3</code></td><td>Table likely carries reclaimable bloat, estimated (PostgreSQL)</td><td>Estimated bloat on a large table crosses the reclaim threshold.</td></tr>
+          <tr><td><code>R-M4</code></td><td>Table carries significant reclaimable space / fragmentation (MySQL)</td><td><code>data_free</code> is a large fraction of a big table's size — an <code>OPTIMIZE TABLE</code> candidate.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2><span class="badge">Config</span> Configuration rules</h2>
+    <p>
+      The configuration check (<code>R-CFG-PG</code> / <code>R-CFG-MY</code>) evaluates a whitelist
+      of performance-relevant settings against your database's actual size and
+      workload — it never flags a setting in the abstract.
+    </p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Engine</th><th>Settings evaluated (examples)</th></tr></thead>
+        <tbody>
+          <tr><td>PostgreSQL</td><td><code>shared_buffers</code>, <code>work_mem</code> × <code>max_connections</code>, <code>effective_cache_size</code>, autovacuum scale factors, <code>max_connections</code>, <code>checkpoint_completion_target</code></td></tr>
+          <tr><td>MySQL / MariaDB</td><td><code>innodb_buffer_pool_size</code> vs. data size and buffer-pool hit ratio, redo log file size, table-open-cache churn, thread-cache efficiency, <code>max_connections</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <span class="label">Why thresholds are conservative</span>
+      False positives erode trust faster than anything else, so every threshold is
+      tuned to fire only on real, sizeable problems — and each finding names the
+      number that triggered it so you can judge it yourself.
+    </div>
+
+    <div class="article-nav">
+      <a href="/kb/understanding-your-report.html">← Understanding your report</a>
+      <a href="/kb/faq.html">FAQ &amp; troubleshooting →</a>
+    </div>
+  </main>
+
+  <footer class="kb-footer">
+    <div class="wrap"><p class="label">DBDoctor · your credentials never leave your machine · reports reviewed by a human before delivery</p></div>
+  </footer>
+</body>
+</html>
