@@ -122,6 +122,13 @@ export default function Dashboard() {
               </span>
               {job.status === 'approved' && (
                 <>
+                  <Link
+                    href={`/jobs/${job.id}/report`}
+                    className="font-mono text-[11px] uppercase text-flag-info hover:underline"
+                    data-testid="view-report"
+                  >
+                    view
+                  </Link>
                   <button
                     onClick={() => downloadReport(job.id, job.has_pdf ? 'pdf' : 'html')}
                     className="font-mono text-[11px] uppercase text-flag-info hover:underline"
@@ -138,12 +145,13 @@ export default function Dashboard() {
               )}
               {admin && job.status === 'review' && (
                 <>
-                  <a
-                    href={api.reportUrl(job.id, 'html')}
+                  <Link
+                    href={`/jobs/${job.id}/report`}
                     className="font-mono text-[11px] uppercase text-flag-info hover:underline"
+                    data-testid="inspect-report"
                   >
                     inspect
-                  </a>
+                  </Link>
                   <button
                     onClick={() => approve(job.id)}
                     className="btn !py-1 border-flag-ok/30 bg-flag-ok/10 text-flag-ok hover:bg-flag-ok/20"
