@@ -21,7 +21,7 @@ class Settings(BaseSettings):
 
     # auth
     jwt_secret: str = "dev-secret-change-me"  # MUST be overridden in production
-    jwt_expiry_minutes: int = 60
+    jwt_expiry_minutes: int = 480  # 8h working session; override in production
     admin_emails: str = ""  # comma-separated; these accounts get review rights
 
     # pipeline

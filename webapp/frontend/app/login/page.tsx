@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, setSession } from '@/lib/api';
 
@@ -11,6 +11,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [expired, setExpired] = useState(false);
+
+  // Set by the API client when it clears an expired/revoked session and
+  // redirects here (?expired=1). Read from the URL to avoid a Suspense boundary.
+  useEffect(() => {
+    setExpired(new URLSearchParams(window.location.search).get('expired') === '1');
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -34,6 +41,11 @@ export default function LoginPage() {
         <h1 className="mt-2 text-xl font-light tracking-tight text-bone-100">
           {mode === 'login' ? 'Sign in' : 'Create your account'}
         </h1>
+        {expired && mode === 'login' && (
+          <p className="mt-3 text-xs text-flag-warning" data-testid="session-expired">
+            Your session expired — please sign in again to continue.
+          </p>
+        )}
         <form onSubmit={submit} className="mt-6 space-y-3">
           <div>
             <label className="label mb-1.5 block">email</label>
