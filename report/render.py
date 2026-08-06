@@ -111,7 +111,7 @@ def render_report(
     total_ms = sum(q.total_time_ms for q in snapshot.queries) or 1.0
     slow_queries = [
         {
-            "sql": q.normalized_sql[:110],
+            "sql": q.normalized_sql,
             "calls": q.calls,
             "total_ms": q.total_time_ms,
             "mean_ms": q.mean_time_ms,

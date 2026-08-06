@@ -14,10 +14,6 @@ def _is_workload_query(q: QueryStat) -> bool:
     return q.normalized_sql.lower().startswith(_DML_PREFIXES)
 
 
-def _short(sql: str, n: int = 80) -> str:
-    return sql if len(sql) <= n else sql[: n - 1] + "…"
-
-
 @register
 class HighTotalTimeQuery(Rule):
     id = "R-Q1"
@@ -37,7 +33,7 @@ class HighTotalTimeQuery(Rule):
                 self.finding(
                     snapshot,
                     severity="CRITICAL" if pct >= T.q1_critical_pct else "HIGH",
-                    affected_object=_short(q.normalized_sql),
+                    affected_object=q.normalized_sql,
                     evidence={
                         "calls": q.calls,
                         "total_ms": round(q.total_time_ms, 1),
@@ -79,7 +75,7 @@ class SlowMeanTimeQuery(Rule):
                 self.finding(
                     snapshot,
                     severity=severity,
-                    affected_object=_short(q.normalized_sql),
+                    affected_object=q.normalized_sql,
                     evidence={
                         "mean_ms": round(q.mean_time_ms, 1),
                         "calls": q.calls,
@@ -123,7 +119,7 @@ class HighFrequencyQuery(Rule):
                 self.finding(
                     snapshot,
                     severity="HIGH" if rate >= T.q3_high_calls_per_day else "MEDIUM",
-                    affected_object=_short(q.normalized_sql),
+                    affected_object=q.normalized_sql,
                     evidence={
                         basis: round(rate, 0),
                         "calls": q.calls,
