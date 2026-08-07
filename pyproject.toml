@@ -38,6 +38,14 @@ testbed = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.uv]
+# Corporate networks frequently block Astral's interpreter CDN
+# (python-build-standalone). Never download a managed Python — use the
+# 3.12+ interpreter already installed on the machine. Package downloads
+# still come from PyPI (or your configured index), which is unaffected.
+python-downloads = "never"
+
+
 [tool.hatch.build.targets.wheel]
 packages = ["engine", "report", "webapp", "cli", "collector"]
 

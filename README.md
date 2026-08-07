@@ -38,6 +38,10 @@ snapshot.json   Snapshot →    AnalysisResult →
 
 Requires Python 3.12+ (managed via [uv](https://docs.astral.sh/uv/)) and Docker.
 
+On Windows, or to run without uv (plain `pip` + `venv`), see
+[`docs/windows_setup.md`](docs/windows_setup.md) — it also lists a pip
+equivalent for every `make` target.
+
 ```bash
 make setup          # create .venv with all dependency groups
 make lint           # ruff check + format check
