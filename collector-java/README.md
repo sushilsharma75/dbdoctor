@@ -29,6 +29,20 @@ Identical guarantees to the Python collectors:
   `performance_schema` digests produce a reduced snapshot with clear notes, not
   a crash — same capability flags as the Python collectors.
 
+## Prebuilt jar
+
+A ready-to-run build is committed at
+[`release/dbdoctor-collector-0.1.0.jar`](release/dbdoctor-collector-0.1.0.jar) so you
+can run it without building. Verify its integrity against the published
+checksum before use:
+
+```bash
+sha256sum -c release/dbdoctor-collector-0.1.0.jar.sha256
+```
+
+Only a JRE 17+ is needed to run it (no Maven). For maximum trust, prefer
+building from source (below) rather than trusting the prebuilt binary.
+
 ## Build
 
 Requires JDK 17+ and Maven. Produces one self-contained jar with all three JDBC

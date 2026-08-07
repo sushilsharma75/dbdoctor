@@ -1003,7 +1003,7 @@ public final class DbDoctorCollector {
     }
 
     static final String USAGE = """
-        dbdoctor JDBC collector — writes a normalized snapshot.json for DBDoctor.
+        dbdoctor JDBC collector - writes a normalized snapshot.json for DBDoctor.
 
         Usage:
           java -jar dbdoctor-collector.jar --engine <postgres|mysql|mariadb> \\
