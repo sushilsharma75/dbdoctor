@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>io.dbdoctor</groupId>
+  <artifactId>dbdoctor-collector</artifactId>
+  <version>0.1.0</version>
+  <packaging>jar</packaging>
+  <name>dbdoctor-collector</name>
+  <description>
+    Read-only statistics collector for DBDoctor. Connects to PostgreSQL,
+    MySQL, or MariaDB over JDBC and writes a normalized snapshot.json that
+    the DBDoctor engine consumes. No writes to the target database; SQL
+    literals are stripped before anything is written to the snapshot.
+  </description>
+
+  <properties>
+    <maven.compiler.release>17</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- pin driver versions; bump deliberately -->
+    <postgresql.version>42.7.4</postgresql.version>
+    <mariadb.version>3.4.1</mariadb.version>
+    <mysql.version>9.1.0</mysql.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>${postgresql.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.mariadb.jdbc</groupId>
+      <artifactId>mariadb-java-client</artifactId>
+      <version>${mariadb.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.mysql</groupId>
+      <artifactId>mysql-connector-j</artifactId>
+      <version>${mysql.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <finalName>dbdoctor-collector</finalName>
+    <plugins>
+      <!-- produce a single self-contained runnable jar:
+           java -jar target/dbdoctor-collector.jar ... -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.6.0</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals><goal>shade</goal></goals>
+            <configuration>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>io.dbdoctor.collector.DbDoctorCollector</mainClass>
+                </transformer>
+                <!-- JDBC drivers ship META-INF/services entries; merge them -->
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+              </transformers>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

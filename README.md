@@ -26,6 +26,7 @@ snapshot.json   Snapshot →    AnalysisResult →
 | Directory | Contract |
 |---|---|
 | `collector/` | Standalone single-file scripts a customer can audit in ~10 minutes. Stdlib + one DB driver (`psycopg` or `PyMySQL`) only — **no imports from the rest of this repo**, no writes to the target DB, literals stripped before anything leaves the customer machine. Emits Snapshot JSON. |
+| `collector-java/` | JDBC collector (PostgreSQL/MySQL/MariaDB) for enterprise/Java-shop environments where Python can't be installed. Same read-only, literal-stripping contract; emits the identical Snapshot JSON. See `collector-java/README.md`. |
 | `engine/` | Pure functions: `Snapshot in → AnalysisResult out`. No I/O, no network, no DB. Rules live in `engine/rules/`, all tunable thresholds in one file. |
 | `report/` | Turns an `AnalysisResult` into customer-facing artifacts (HTML, PDF, tasks.md). The LLM here is a narrator only — it may not introduce numbers absent from rule evidence. |
 | `webapp/backend/` | FastAPI app: auth, snapshot upload + validation, audit jobs, billing, founder review-hold. The only component that touches the app database. |
