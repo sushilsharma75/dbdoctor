@@ -42,7 +42,7 @@ TOP_N = 5
 
 
 class HealthScore(BaseModel):
-    score: int
+    score: int | None
     category_deductions: dict[str, int] = Field(
         default_factory=dict, description="points deducted per category, post-cap"
     )

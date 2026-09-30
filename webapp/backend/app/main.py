@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -7,7 +8,14 @@ from fastapi.responses import FileResponse
 from webapp.backend.app import auth, billing, jobs
 from webapp.backend.app.config import get_settings
 
-app = FastAPI(title="DBDoctor API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    get_settings()  # fail startup on unsafe production settings
+    yield
+
+
+app = FastAPI(title="DBDoctor API", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],

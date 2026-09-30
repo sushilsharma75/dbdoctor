@@ -8,7 +8,7 @@ import bcrypt
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -65,6 +65,13 @@ class Credentials(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
 
+    @field_validator("password")
+    @classmethod
+    def bcrypt_length(cls, value: str) -> str:
+        if len(value.encode("utf-8")) > 72:
+            raise ValueError("password must be at most 72 UTF-8 bytes")
+        return value
+
 
 class TokenOut(BaseModel):
     token: str
@@ -80,7 +87,7 @@ def register(body: Credentials, db: Session = Depends(get_db)) -> TokenOut:
     user = User(
         email=email,
         password_hash=hash_password(body.password),
-        is_admin=email in get_settings().admin_email_set,
+        is_admin=False,
     )
     db.add(user)
     db.commit()
@@ -92,12 +99,4 @@ def login(body: Credentials, db: Session = Depends(get_db)) -> TokenOut:
     user = db.scalar(select(User).where(User.email == body.email.lower()))
     if user is None or not verify_password(body.password, user.password_hash):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid credentials")
-    # Keep review rights in sync with DBDOCTOR_ADMIN_EMAILS: computing is_admin
-    # only at register time meant adding an email to the admin list after signup
-    # never took effect. Reconcile on every login so the founder gets reviewer
-    # access without having to re-register.
-    should_admin = user.email in get_settings().admin_email_set
-    if user.is_admin != should_admin:
-        user.is_admin = should_admin
-        db.commit()
     return TokenOut(token=create_token(user), email=user.email, is_admin=user.is_admin)

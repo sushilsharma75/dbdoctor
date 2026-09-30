@@ -19,6 +19,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from engine.schema import SchemaCatalog
+
 EngineName = Literal["postgres", "mysql", "mariadb"]
 
 
@@ -65,6 +67,17 @@ class SnapshotMeta(BaseModel):
 
 class QueryStat(BaseModel):
     """One normalized statement's cumulative statistics."""
+
+    is_top_level: bool | None = Field(
+        default=None, description="PG: pg_stat_statements.toplevel. MySQL: unknown."
+    )
+    temp_blocks_read: int | None = Field(
+        default=None,
+        description="PG: pg_stat_statements.temp_blks_read, executor spill blocks, not user temp-table sizes. MySQL: unavailable.",
+    )
+    temp_blocks_written: int | None = Field(
+        default=None, description="PG: pg_stat_statements.temp_blks_written. MySQL: unavailable."
+    )
 
     query_digest: str = Field(
         description="Stable identifier of the normalized statement. PG: pg_stat_statements.queryid (text). MySQL: events_statements_summary_by_digest.DIGEST."
@@ -176,6 +189,10 @@ class IndexStat(BaseModel):
         default=None,
         description="Cumulative index scans. PG: pg_stat_user_indexes.idx_scan. MySQL: null; unused indexes arrive via sys.schema_unused_indexes (is_unused_candidate).",
     )
+    is_constraint: bool = Field(
+        default=False,
+        description="PG: pg_constraint.conindid dependency. MySQL: primary/unique protection uses the other flags.",
+    )
     is_primary: bool = Field(
         default=False,
         description="Index backs the primary key. PG: pg_index.indisprimary. MySQL: INDEX_NAME = 'PRIMARY'.",
@@ -260,10 +277,29 @@ class ConfigSetting(BaseModel):
     )
 
 
+class RoutineStat(BaseModel):
+    """Runtime summaries from MySQL stored-program instrumentation."""
+
+    name: str
+    kind: str
+    calls: int
+    total_time_ms: float
+    nested_statements: int
+    nested_time_ms: float
+
+
 class Snapshot(BaseModel):
     """Root document: one normalized collection run from one database."""
 
     meta: SnapshotMeta = Field(description="Provenance + capabilities. Both engines.")
+    routine_stats: list[RoutineStat] = Field(
+        default_factory=list,
+        description="PG: not collected. MySQL: events_statements_summary_by_program, optional instrumentation.",
+    )
+    schema_catalog: SchemaCatalog | None = Field(
+        default=None,
+        description="Both engines: optional static metadata derived from uploaded DDL; no runtime values.",
+    )
     queries: list[QueryStat] = Field(
         default_factory=list,
         description="Top statements by total time (max 200). PG: pg_stat_statements. MySQL: events_statements_summary_by_digest.",

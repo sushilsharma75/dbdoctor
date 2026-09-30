@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import sys
 import time
+from datetime import UTC, datetime
 from pathlib import Path
 
 import click
@@ -42,7 +43,7 @@ class _Stage:
 @click.option(
     "--snapshot",
     "snapshot_path",
-    required=True,
+    required=False,
     type=click.Path(exists=True, dir_okay=False),
     help="snapshot.json produced by a collector",
 )
@@ -63,6 +64,18 @@ class _Stage:
     type=click.Path(file_okay=False),
     help="output directory for the bundle",
 )
+@click.option(
+    "--ddl",
+    "ddl_paths",
+    multiple=True,
+    type=click.Path(exists=True, dir_okay=False),
+    help="Optional DDL file; repeat for related schemas (20 files / 5 MiB total).",
+)
+@click.option(
+    "--engine",
+    type=click.Choice(["postgres", "mysql", "mariadb"]),
+    help="Required for DDL-only analysis without a snapshot.",
+)
 @click.option("--skip-pdf", is_flag=True, help="skip PDF generation (HTML only)")
 @click.option("--skip-ai", is_flag=True, help="skip AI narration (template text only)")
 @click.option(
@@ -70,14 +83,31 @@ class _Stage:
     default=None,
     help="Anthropic model id (default: env DBDOCTOR_AI_MODEL or claude-opus-4-8)",
 )
-def main(snapshot_path, delta_path, client_alias, out_dir, skip_pdf, skip_ai, ai_model) -> None:
+def main(
+    snapshot_path, delta_path, client_alias, out_dir, skip_pdf, skip_ai, ai_model, ddl_paths, engine
+) -> None:
     """Turn SNAPSHOT into report.html, report.pdf, tasks.md and findings.json."""
+    if not snapshot_path and not (ddl_paths and engine):
+        raise click.UsageError("Provide --snapshot, or --ddl with --engine for static analysis.")
+    if delta_path and not snapshot_path:
+        raise click.UsageError("--delta-of requires --snapshot")
     t_start = time.monotonic()
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
 
     with _Stage("validate snapshot"):
-        raw = json.loads(Path(snapshot_path).read_text(encoding="utf-8"))
+        raw = (
+            json.loads(Path(snapshot_path).read_text(encoding="utf-8"))
+            if snapshot_path
+            else {
+                "meta": {
+                    "engine": engine,
+                    "version": "ddl-1",
+                    "host_alias": "ddl-only",
+                    "collected_at": datetime.now(UTC).isoformat(),
+                }
+            }
+        )
 
     if delta_path:
         with _Stage("apply delta"):
@@ -86,12 +116,33 @@ def main(snapshot_path, delta_path, client_alias, out_dir, skip_pdf, skip_ai, ai
             raw = apply_delta(raw, json.loads(Path(delta_path).read_text(encoding="utf-8")))
 
     snapshot = Snapshot.model_validate(raw)
+    if engine and snapshot.meta.engine != engine:
+        raise click.UsageError("--engine does not match the snapshot")
+    if ddl_paths:
+        from engine.ddl import MAX_DDL_BYTES, MAX_DDL_FILES, ingest_ddl
+
+        if len(ddl_paths) > MAX_DDL_FILES:
+            raise click.UsageError("At most 20 DDL files are supported")
+        sources, remaining = [], MAX_DDL_BYTES
+        try:
+            for path in ddl_paths:
+                with Path(path).open("rb") as stream:
+                    data = stream.read(remaining + 1)
+                remaining -= len(data)
+                if remaining < 0:
+                    raise ValueError("DDL exceeds 5 MiB combined")
+                sources.append(data.decode("utf-8-sig"))
+            schemas = {t.schema_name for t in snapshot.tables}
+            default_schema = next(iter(schemas)) if len(schemas) == 1 else None
+            snapshot.schema_catalog = ingest_ddl(sources, snapshot.meta.engine, default_schema)
+        except (ValueError, UnicodeDecodeError) as exc:
+            raise click.ClickException(str(exc)) from None
 
     with _Stage("run rules + score"):
         result = run_all(snapshot)
+    score_label = f"{result.score.score}/100" if result.score.score is not None else "unavailable"
     click.echo(
-        f"[audit]   engine={result.engine} findings={len(result.findings)} "
-        f"score={result.score.score}/100"
+        f"[audit]   engine={result.engine} findings={len(result.findings)} score={score_label}"
     )
 
     ai_texts: dict[str, str] = {}
@@ -112,6 +163,10 @@ def main(snapshot_path, delta_path, client_alias, out_dir, skip_pdf, skip_ai, ai
 
     with _Stage("export tasks.md + findings.json"):
         (out / "tasks.md").write_text(tasks_markdown(result, ai_texts), encoding="utf-8")
+        if result.schema_catalog:
+            (out / "schema.json").write_text(
+                result.schema_catalog.model_dump_json(indent=2), encoding="utf-8"
+            )
         (out / "findings.json").write_text(result.model_dump_json(indent=2), encoding="utf-8")
 
     click.echo(

@@ -19,6 +19,7 @@ export default function NewAudit() {
   const [engine, setEngine] = useState<Engine | null>(null);
   const [alias, setAlias] = useState('');
   const [file, setFile] = useState<File | null>(null);
+  const [ddl, setDdl] = useState<File[]>([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -31,7 +32,7 @@ export default function NewAudit() {
     setBusy(true);
     setError('');
     try {
-      await api.uploadSnapshot(file, alias || 'my database');
+      await api.uploadSnapshot(file, alias || 'my database', ddl);
       router.push('/dashboard');
     } catch (err) {
       setError((err as Error).message);
@@ -122,6 +123,18 @@ export default function NewAudit() {
                 data-testid="snapshot-file"
               />
             </div>
+            <div>
+              <label htmlFor="ddl-files" className="label mb-1.5 block">Schema and procedure DDL (optional)</label>
+              <input id="ddl-files" type="file" multiple accept=".sql,text/plain"
+                onChange={(e) => setDdl(Array.from(e.target.files ?? []))}
+                className="field cursor-pointer" data-testid="ddl-files" />
+              <p className="mt-2 text-xs text-bone-400">
+                Up to 20 SQL files, 5 MiB combined. Include related table and procedure definitions.
+                DDL is inspected without execution. Reports show static structure; runtime variable
+                values, temporary-table sizes and dynamic SQL still need workload evidence.
+                Review these files for confidential content before uploading.
+              </p>
+            </div>
           </div>
           {error && (
             <p className="mt-3 text-xs text-flag-critical" data-testid="upload-error">
@@ -137,7 +150,7 @@ export default function NewAudit() {
             {busy ? 'Uploading…' : 'Upload & start analysis'}
           </button>
           <p className="mt-3 font-mono text-[11px] text-bone-500">
-            you can open snapshot.json in any editor first — everything we receive is in that file
+            review snapshot.json and any optional SQL files before uploading
           </p>
         </section>
       )}

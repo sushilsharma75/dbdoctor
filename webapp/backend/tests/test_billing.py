@@ -114,6 +114,9 @@ def test_stripe_webhook_flips_job_to_paid(client, monkeypatch):
             "data": {
                 "object": {
                     "id": "cs_test_123",
+                    "amount_total": checkout["amount_minor"],
+                    "currency": "usd",
+                    "payment_status": "paid",
                     "metadata": {"payment_id": checkout["payment_id"]},
                 }
             },
@@ -151,6 +154,10 @@ def test_razorpay_webhook_generates_intra_state_invoice(client, monkeypatch, tmp
                 "payment_link": {
                     "entity": {
                         "id": "plink_test_1",
+                        "amount": checkout["amount_minor"],
+                        "amount_paid": checkout["amount_minor"],
+                        "currency": "INR",
+                        "status": "paid",
                         "notes": {"payment_id": checkout["payment_id"]},
                     }
                 }
@@ -200,3 +207,70 @@ def test_invoice_numbering_series(client, monkeypatch):
     feb = datetime(2027, 2, 1, tzinfo=UTC)
     assert next_invoice_number(db, "DBD", feb) == "DBD-2627-0001"
     db.close()
+
+
+def test_webhooks_disabled_and_empty_secret_rejected(client):
+    from webapp.backend.app.billing import verify_razorpay_signature, verify_stripe_signature
+
+    payload = b"{}"
+    signature = hmac.new(b"", payload, hashlib.sha256).hexdigest()
+    assert not verify_razorpay_signature(payload, signature, "")
+    assert not verify_stripe_signature(payload, "t=1,v1=x", "")
+    assert client.post("/billing/webhook/stripe", content=payload).status_code == 503
+    assert client.post("/billing/webhook/razorpay", content=payload).status_code == 503
+
+
+def test_old_stripe_signature_rejected():
+    from webapp.backend.app.billing import verify_stripe_signature
+
+    payload = b"{}"
+    t = str(int(time.time()) - 3600)
+    signature = hmac.new(
+        STRIPE_SECRET.encode(), f"{t}.".encode() + payload, hashlib.sha256
+    ).hexdigest()
+    assert not verify_stripe_signature(payload, f"t={t},v1={signature}", STRIPE_SECRET)
+
+
+def test_signed_but_unpaid_or_mismatched_checkout_rejected(client, monkeypatch):
+    _, _, checkout = _checkout(client, monkeypatch, provider="stripe")
+    base = {
+        "id": "cs_test",
+        "metadata": {"payment_id": checkout["payment_id"]},
+        "amount_total": checkout["amount_minor"],
+        "currency": "usd",
+        "payment_status": "paid",
+    }
+    for override in [{"amount_total": 1}, {"currency": "eur"}, {"payment_status": "unpaid"}]:
+        payload = json.dumps(
+            {"type": "checkout.session.completed", "data": {"object": base | override}}
+        ).encode()
+        response = client.post(
+            "/billing/webhook/stripe",
+            content=payload,
+            headers={"Stripe-Signature": _stripe_signed(payload)},
+        )
+        assert response.status_code == 400
+
+
+def test_cross_provider_payment_rejected(client, monkeypatch):
+    _, _, checkout = _checkout(client, monkeypatch, provider="razorpay")
+    payload = json.dumps(
+        {
+            "type": "checkout.session.completed",
+            "data": {
+                "object": {
+                    "id": "cs_test",
+                    "metadata": {"payment_id": checkout["payment_id"]},
+                    "amount_total": checkout["amount_minor"],
+                    "currency": "inr",
+                    "payment_status": "paid",
+                }
+            },
+        }
+    ).encode()
+    response = client.post(
+        "/billing/webhook/stripe",
+        content=payload,
+        headers={"Stripe-Signature": _stripe_signed(payload)},
+    )
+    assert response.status_code == 400

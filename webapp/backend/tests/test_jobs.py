@@ -5,7 +5,7 @@ import io
 import json
 from pathlib import Path
 
-from webapp.backend.tests.conftest import register
+from webapp.backend.tests.conftest import provision_admin, register
 
 FIXTURE = Path(__file__).parent.parent.parent.parent / "fixtures" / "pg_full.json"
 
@@ -53,7 +53,7 @@ def test_upload_runs_pipeline_into_review_hold(client):
 
 def test_admin_approval_releases_report(client):
     dev = register(client, "dev@dbdoctor.io")
-    admin = register(client, "founder@dbdoctor-admin.io")
+    admin = provision_admin(client)
 
     job_id = _upload(client, dev, FIXTURE.read_bytes()).json()["id"]
 
@@ -76,7 +76,7 @@ def test_admin_approval_releases_report(client):
 
 def test_double_approval_rejected(client):
     dev = register(client, "dev@dbdoctor.io")
-    admin = register(client, "founder@dbdoctor-admin.io")
+    admin = provision_admin(client)
     job_id = _upload(client, dev, FIXTURE.read_bytes()).json()["id"]
     assert client.post(f"/jobs/{job_id}/approve", headers=admin).status_code == 200
     assert client.post(f"/jobs/{job_id}/approve", headers=admin).status_code == 409
@@ -104,7 +104,7 @@ def test_broken_pdf_renderer_does_not_fail_the_job(client, monkeypatch):
     assert job["has_pdf"] is False
     assert "PDF unavailable" in job["error"]
 
-    admin = register(client, "founder@dbdoctor-admin.io")
+    admin = provision_admin(client)
     client.post(f"/jobs/{job_id}/approve", headers=admin)
     assert client.get(f"/jobs/{job_id}/report?fmt=html", headers=headers).status_code == 200
     assert client.get(f"/jobs/{job_id}/report?fmt=pdf", headers=headers).status_code == 404
@@ -131,3 +131,57 @@ def test_oversized_upload_rejected(client, monkeypatch):
     headers = register(client, "dev@dbdoctor.io")
     resp = _upload(client, headers, FIXTURE.read_bytes())
     assert resp.status_code == 413
+
+
+def test_ddl_upload_reaches_report_and_never_stores_raw_body(client):
+    from tests.test_ddl import PG
+    from webapp.backend.app.config import get_settings
+
+    dev = register(client, "ddl@dbdoctor.io")
+    response = client.post(
+        "/jobs",
+        headers=dev,
+        files=[
+            ("snapshot", ("snapshot.json", FIXTURE.read_bytes(), "application/json")),
+            ("ddl", ("schema.sql", PG.encode(), "text/plain")),
+        ],
+    )
+    assert response.status_code == 201, response.text
+    job_id = response.json()["id"]
+    job_dir = Path(get_settings().data_dir) / "jobs" / job_id
+    assert (job_dir / "schema.json").exists()
+    for path in job_dir.iterdir():
+        assert "private_token" not in path.read_text()
+    admin = provision_admin(client)
+    html = client.get(f"/jobs/{job_id}/report?fmt=html", headers=admin)
+    assert html.status_code == 200 and "v_count" in html.text
+    assert client.get(f"/jobs/{job_id}/report?fmt=schema", headers=dev).status_code == 409
+    assert client.get(f"/jobs/{job_id}/report?fmt=schema", headers=admin).status_code == 200
+
+
+def test_invalid_ddl_is_rejected_before_job_created(client):
+    dev = register(client, "ddl@dbdoctor.io")
+    response = client.post(
+        "/jobs",
+        headers=dev,
+        files=[
+            ("snapshot", ("snapshot.json", FIXTURE.read_bytes(), "application/json")),
+            ("ddl", ("broken.sql", b"SELECT 'secret", "text/plain")),
+        ],
+    )
+    assert response.status_code == 422
+    assert client.get("/jobs", headers=dev).json() == []
+
+
+def test_uploaded_sql_is_redacted_again(client):
+    from webapp.backend.app.config import get_settings
+
+    dev = register(client, "redaction@dbdoctor.io")
+    snapshot = json.loads(FIXTURE.read_text())
+    snapshot["queries"][0]["normalized_sql"] = (
+        "SELECT * FROM t WHERE id='private_token' /* private_token */"
+    )
+    response = _upload(client, dev, json.dumps(snapshot).encode())
+    assert response.status_code == 201
+    path = Path(get_settings().data_dir) / "jobs" / response.json()["id"] / "snapshot.json"
+    assert "private_token" not in path.read_text()

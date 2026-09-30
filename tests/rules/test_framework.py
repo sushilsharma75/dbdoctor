@@ -76,4 +76,4 @@ def test_findings_sorted_by_severity_then_impact():
     assert positions == sorted(positions)
     # the 75% query (CRITICAL) outranks the 25% one (HIGH)
     q1 = [f for f in result.findings if f.rule_id == "R-Q1"]
-    assert q1[0].evidence["pct_of_db_time"] == 75.0
+    assert q1[0].evidence["pct_of_captured_time"] == 75.0

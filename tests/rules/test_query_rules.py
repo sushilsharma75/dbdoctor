@@ -28,7 +28,7 @@ def test_q1_fires_at_20_pct_and_evidence_arithmetic_matches():
     f = _fired(run_all(snap), "R-Q1")
     assert len(f) == 1
     ev = f[0].evidence
-    assert ev["pct_of_db_time"] == 30.0  # 3000 / 10000
+    assert ev["pct_of_captured_time"] == 30.0  # 3000 / 10000
     assert ev["rows_per_call"] == 2.0
     assert ev["calls"] == 1000
     assert f[0].severity == "HIGH"

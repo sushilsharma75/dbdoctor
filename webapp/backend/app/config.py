@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -22,7 +23,15 @@ class Settings(BaseSettings):
     # auth
     jwt_secret: str = "dev-secret-change-me"  # MUST be overridden in production
     jwt_expiry_minutes: int = 480  # 8h working session; override in production
-    admin_emails: str = ""  # comma-separated; these accounts get review rights
+    admin_emails: str = ""  # legacy setting; never grants privileges
+
+    @model_validator(mode="after")
+    def secure_production(self):
+        if self.env.lower() in {"production", "prod"} and (
+            self.jwt_secret == "dev-secret-change-me" or len(self.jwt_secret) < 32
+        ):
+            raise ValueError("Production requires a random JWT secret of at least 32 characters")
+        return self
 
     # pipeline
     max_upload_bytes: int = 50 * 1024 * 1024

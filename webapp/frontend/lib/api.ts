@@ -90,10 +90,11 @@ export const api = {
 
   approveJob: (id: string) => request<Job>(`/jobs/${id}/approve`, { method: 'POST' }),
 
-  uploadSnapshot: (file: File, clientAlias: string) => {
+  uploadSnapshot: (file: File, clientAlias: string, ddl: File[] = []) => {
     const form = new FormData();
     form.append('snapshot', file);
     form.append('client_alias', clientAlias);
+    ddl.forEach((source) => form.append('ddl', source));
     return request<Job>('/jobs', { method: 'POST', body: form });
   },
 

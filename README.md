@@ -54,3 +54,18 @@ Run the backend locally:
 uv run uvicorn webapp.backend.app.main:app --reload
 # GET http://127.0.0.1:8000/health  →  {"status":"ok", ...}
 ```
+
+## Schema and stored procedure analysis
+
+Upload optional SQL files with a snapshot, or run a static report locally:
+
+```bash
+uv run dbdoctor-audit --ddl schema.sql --ddl procedures.sql --engine postgres \
+  --out out/static --skip-ai --skip-pdf
+```
+
+The report includes procedure parameters, local-variable references, temporary-table
+usage and unresolved analysis cases. It never executes uploaded SQL. Workload
+statistics and plans are still needed to establish performance improvements.
+See [DDL and procedure analysis](docs/ddl_and_procedures.md) for scope and limits,
+and [administrator setup and hardening](docs/review_hardening.md) before deployment.

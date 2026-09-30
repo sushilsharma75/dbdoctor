@@ -47,6 +47,15 @@ def stack(tmp_path_factory):
         "DBDOCTOR_ADMIN_EMAILS": "founder@dbdoctor-admin.io",
         "DBDOCTOR_ENABLE_PDF": "false",
     }
+    subprocess.run(
+        [sys.executable, "-m", "cli.admin", "--email", "founder@dbdoctor-admin.io"],
+        input="hunter2hunter2\nhunter2hunter2\n",
+        text=True,
+        capture_output=True,
+        check=True,
+        cwd=REPO,
+        env=env,
+    )
     api = subprocess.Popen(
         [sys.executable, "-m", "uvicorn", "webapp.backend.app.main:app", "--port", str(API_PORT)],
         cwd=REPO,
@@ -102,6 +111,15 @@ def test_signup_upload_review_approve_flow(stack):
         page.get_by_test_id("collector-done").click()
         page.get_by_test_id("alias").fill("Acme Production")
         page.get_by_test_id("snapshot-file").set_input_files(REPO / "fixtures" / "pg_full.json")
+        from tests.test_ddl import PG
+
+        page.get_by_test_id("ddl-files").set_input_files(
+            {
+                "name": "schema.sql",
+                "mimeType": "text/plain",
+                "buffer": PG.encode(),
+            }
+        )
         page.get_by_test_id("upload").click()
 
         # dashboard: job appears, held in expert review
@@ -114,7 +132,6 @@ def test_signup_upload_review_approve_flow(stack):
         # founder approves via the admin dashboard
         admin = browser.new_page()
         admin.goto(f"{stack}/login")
-        admin.get_by_test_id("toggle-mode").click()
         admin.get_by_test_id("email").fill("founder@dbdoctor-admin.io")
         admin.get_by_test_id("password").fill("hunter2hunter2")
         admin.get_by_test_id("submit").click()

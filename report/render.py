@@ -17,7 +17,9 @@ _TEMPLATE_DIR = Path(__file__).parent / "template"
 _ENGINE_LABELS = {"postgres": "PostgreSQL", "mysql": "MySQL", "mariadb": "MariaDB"}
 
 
-def _score_color(score: int) -> str:
+def _score_color(score: int | None) -> str:
+    if score is None:
+        return "#6a6a6a"
     if score >= 85:
         return "#4a6741"
     if score >= 60:
@@ -34,13 +36,12 @@ def _summary_bullets(result: AnalysisResult) -> list[str]:
         by_sev[f.severity] = by_sev.get(f.severity, 0) + 1
 
     bullets = [
-        f"Overall health score: {result.score.score}/100 — "
-        + (
-            "healthy with room to improve."
-            if result.score.score >= 85
-            else "degraded; the issues below cost real performance."
-            if result.score.score >= 60
-            else "significantly degraded; act on the top issues soon."
+        (
+            "Health score unavailable: insufficient evidence. Query and table observations "
+            "are required; missing observations do not establish database health."
+            if result.score.score is None
+            else f"Health score for captured evidence: {result.score.score}/100. "
+            "This score covers only the observations and checks listed in this report."
         ),
         f"{n} findings in total: "
         + ", ".join(
@@ -165,6 +166,9 @@ def render_report(
         connections=snapshot.connections,
         engine_health_rows=engine_health_rows,
         action_plan=_action_plan(result),
+        routine_stats=snapshot.routine_stats,
+        schema_catalog=result.schema_catalog,
+        coverage=result.coverage,
         capabilities=result.capabilities,
         capability_notes=snapshot.meta.capability_notes,
     )

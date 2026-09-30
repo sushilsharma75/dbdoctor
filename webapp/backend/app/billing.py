@@ -12,9 +12,11 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import time
 import uuid
 from datetime import UTC, datetime
 from decimal import ROUND_HALF_UP, Decimal
+from html import escape
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -156,14 +158,14 @@ def render_invoice_html(payment: Payment, gst: dict, settings) -> str:
         seller_gstin=settings.seller_gstin or "(unregistered — set DBDOCTOR_SELLER_GSTIN)",
         seller_state=settings.seller_state_code,
         date=payment.created_at.strftime("%d %b %Y"),
-        buyer_name=payment.buyer_name or "Retail customer",
-        buyer_gstin_line=f"· GSTIN: {payment.buyer_gstin}" if payment.buyer_gstin else "",
+        buyer_name=escape(payment.buyer_name or "Retail customer"),
+        buyer_gstin_line=f"· GSTIN: {escape(payment.buyer_gstin)}" if payment.buyer_gstin else "",
         product=PRODUCT_NAME,
         sac=SAC_CODE,
         currency=payment.currency,
         supply_note=_SUPPLY_NOTES[gst["supply_type"]],
         provider=payment.provider,
-        provider_ref=payment.provider_ref or "",
+        provider_ref=escape(payment.provider_ref or ""),
         taxable=gst["taxable_value"],
         cgst=gst["cgst"],
         sgst=gst["sgst"],
@@ -179,8 +181,12 @@ def render_invoice_html(payment: Payment, gst: dict, settings) -> str:
 
 def verify_stripe_signature(payload: bytes, header: str, secret: str) -> bool:
     """Stripe-Signature: t=<ts>,v1=<hmac_sha256(f"{t}.{payload}")>."""
+    if not secret:
+        return False
     try:
-        parts = dict(p.split("=", 1) for p in header.split(","))
+        parts = dict(p.strip().split("=", 1) for p in header.split(","))
+        if abs(time.time() - int(parts["t"])) > 300:
+            return False
         signed = f"{parts['t']}.".encode() + payload
         expected = hmac.new(secret.encode(), signed, hashlib.sha256).hexdigest()
         return hmac.compare_digest(expected, parts["v1"])
@@ -190,6 +196,8 @@ def verify_stripe_signature(payload: bytes, header: str, secret: str) -> bool:
 
 def verify_razorpay_signature(payload: bytes, header: str, secret: str) -> bool:
     """X-Razorpay-Signature: hmac_sha256(payload) hex."""
+    if not secret:
+        return False
     expected = hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, header or "")
 
@@ -301,6 +309,20 @@ def _mark_paid(payment: Payment, provider_ref: str, db: Session) -> None:
     db.commit()
 
 
+def _validate_payment(payment, provider, amount, currency, status, reference):
+    if (
+        payment.provider != provider
+        or type(amount) is not int
+        or amount != payment.amount_minor
+        or not isinstance(currency, str)
+        or currency.upper() != payment.currency
+        or status != "paid"
+        or not isinstance(reference, str)
+        or not reference
+    ):
+        raise HTTPException(400, "payment details do not match checkout")
+
+
 @router.post("/webhook/stripe")
 async def stripe_webhook(
     request: Request,
@@ -308,17 +330,32 @@ async def stripe_webhook(
     db: Session = Depends(get_db),
 ):
     settings = get_settings()
+    if not settings.enable_payments or not settings.stripe_webhook_secret:
+        raise HTTPException(503, "Stripe webhooks are not configured")
     payload = await request.body()
     if not verify_stripe_signature(payload, stripe_signature, settings.stripe_webhook_secret):
         raise HTTPException(400, "invalid webhook signature")
-    event = json.loads(payload)
+    try:
+        event = json.loads(payload)
+        if not isinstance(event, dict):
+            raise ValueError
+    except (ValueError, UnicodeDecodeError):
+        raise HTTPException(400, "invalid webhook JSON") from None
     if event.get("type") != "checkout.session.completed":
         return {"status": "ignored"}
-    session = event["data"]["object"]
+    session = event.get("data", {}).get("object", {})
     payment = db.get(Payment, session.get("metadata", {}).get("payment_id", ""))
     if payment is None:
         raise HTTPException(404, "unknown payment")
-    _mark_paid(payment, session.get("id", ""), db)
+    _validate_payment(
+        payment,
+        "stripe",
+        session.get("amount_total"),
+        session.get("currency"),
+        session.get("payment_status"),
+        session.get("id"),
+    )
+    _mark_paid(payment, session["id"], db)
     return {"status": "ok", "invoice": payment.invoice_number}
 
 
@@ -329,17 +366,34 @@ async def razorpay_webhook(
     db: Session = Depends(get_db),
 ):
     settings = get_settings()
+    if not settings.enable_payments or not settings.razorpay_webhook_secret:
+        raise HTTPException(503, "Razorpay webhooks are not configured")
     payload = await request.body()
     if not verify_razorpay_signature(
         payload, x_razorpay_signature, settings.razorpay_webhook_secret
     ):
         raise HTTPException(400, "invalid webhook signature")
-    event = json.loads(payload)
+    try:
+        event = json.loads(payload)
+        if not isinstance(event, dict):
+            raise ValueError
+    except (ValueError, UnicodeDecodeError):
+        raise HTTPException(400, "invalid webhook JSON") from None
     if event.get("event") != "payment_link.paid":
         return {"status": "ignored"}
-    entity = event["payload"]["payment_link"]["entity"]
+    entity = event.get("payload", {}).get("payment_link", {}).get("entity", {})
     payment = db.get(Payment, entity.get("notes", {}).get("payment_id", ""))
     if payment is None:
         raise HTTPException(404, "unknown payment")
-    _mark_paid(payment, entity.get("id", ""), db)
+    _validate_payment(
+        payment,
+        "razorpay",
+        entity.get("amount_paid"),
+        entity.get("currency"),
+        entity.get("status"),
+        entity.get("id"),
+    )
+    if entity.get("amount") != payment.amount_minor:
+        raise HTTPException(400, "payment amount mismatch")
+    _mark_paid(payment, entity["id"], db)
     return {"status": "ok", "invoice": payment.invoice_number}

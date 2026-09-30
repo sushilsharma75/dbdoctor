@@ -16,6 +16,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 from engine.models import Snapshot
 from webapp.backend.app.auth import get_current_user, require_admin
@@ -115,8 +116,12 @@ def run_pipeline(job_id: str) -> None:
                 result.model_dump_json(indent=2), encoding="utf-8"
             )
 
+            if result.schema_catalog:
+                (job_dir / "schema.json").write_text(
+                    result.schema_catalog.model_dump_json(indent=2), encoding="utf-8"
+                )
             job.report_path = str(job_dir)
-            job.score = str(result.score.score)
+            job.score = str(result.score.score) if result.score.score is not None else None
             job.status = "review"  # held for founder approval — never auto-delivered
         except Exception as exc:  # keep the failure visible on the job
             job.status = "failed"
@@ -135,19 +140,20 @@ def run_pipeline(job_id: str) -> None:
 async def create_job(
     background: BackgroundTasks,
     snapshot: UploadFile = File(..., description="snapshot.json from a dbdoctor collector"),
+    ddl: list[UploadFile] | None = File(None, description="Optional schema/routine SQL files"),
     client_alias: str = Form("client"),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> JobOut:
     settings = get_settings()
-    raw = await snapshot.read()
+    raw = await snapshot.read(settings.max_upload_bytes + 1)
     if len(raw) > settings.max_upload_bytes:
-        raise HTTPException(413, "snapshot exceeds the 50MB limit")
+        raise HTTPException(413, "snapshot exceeds the configured upload limit")
 
     # validate BEFORE accepting anything into storage
     try:
         parsed = Snapshot.model_validate(json.loads(raw))
-    except json.JSONDecodeError as exc:
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
         raise HTTPException(422, f"not valid JSON: {exc}") from None
     except ValidationError as exc:
         first = exc.errors()[0]
@@ -158,13 +164,47 @@ async def create_job(
             "Generate the file with pg_collect.py or mysql_collect.py and upload it unmodified.",
         ) from None
 
+    # Redact again at the upload boundary; never persist the original upload bytes.
+    from engine.sql_lexer import redact_sql
+
+    for query in parsed.queries:
+        query.normalized_sql = redact_sql(
+            query.normalized_sql, mysql=parsed.meta.engine != "postgres"
+        )
+    for index in parsed.indexes:
+        index.definition = redact_sql(index.definition, mysql=parsed.meta.engine != "postgres")
+    parsed.schema_catalog = None  # catalog is derived from DDL, never trusted from snapshot JSON
+    if ddl:
+        from engine.ddl import MAX_DDL_BYTES, MAX_DDL_FILES, ingest_ddl
+
+        if len(ddl) > MAX_DDL_FILES:
+            raise HTTPException(413, "At most 20 DDL files are supported")
+        sources, remaining = [], MAX_DDL_BYTES
+        for source in ddl:
+            data = await source.read(remaining + 1)
+            remaining -= len(data)
+            if remaining < 0:
+                raise HTTPException(413, "DDL exceeds the 5 MiB combined limit")
+            try:
+                sources.append(data.decode("utf-8-sig"))
+            except UnicodeDecodeError:
+                raise HTTPException(422, "DDL must be UTF-8 text") from None
+        try:
+            schemas = {t.schema_name for t in parsed.tables}
+            default_schema = next(iter(schemas)) if len(schemas) == 1 else None
+            parsed.schema_catalog = await run_in_threadpool(
+                ingest_ddl, sources, parsed.meta.engine, default_schema
+            )
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from None
+
     job = AuditJob(user_id=user.id, engine=parsed.meta.engine, client_alias=client_alias[:120])
     db.add(job)
     db.commit()
 
     job_dir = _job_dir(job.id)
     job_dir.mkdir(parents=True, exist_ok=True)
-    (job_dir / "snapshot.json").write_bytes(raw)
+    (job_dir / "snapshot.json").write_text(parsed.model_dump_json(), encoding="utf-8")
 
     background.add_task(run_pipeline, job.id)
     return JobOut.from_job(job)
@@ -197,7 +237,15 @@ def get_report(
     if job.report_path is None:
         raise HTTPException(409, "report has not been generated yet")
 
-    name = "report.pdf" if fmt == "pdf" else "report.html" if fmt == "html" else "tasks.md"
+    names = {
+        "pdf": "report.pdf",
+        "html": "report.html",
+        "tasks": "tasks.md",
+        "schema": "schema.json",
+    }
+    if fmt not in names:
+        raise HTTPException(422, "format must be pdf, html, tasks or schema")
+    name = names[fmt]
     path = Path(job.report_path) / name
     if not path.exists():
         raise HTTPException(404, f"{name} not found for this job")

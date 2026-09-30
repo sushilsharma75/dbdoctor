@@ -30,3 +30,20 @@ def register(client: TestClient, email: str, password: str = "hunter2hunter2") -
     resp = client.post("/auth/register", json={"email": email, "password": password})
     assert resp.status_code == 201, resp.text
     return {"Authorization": f"Bearer {resp.json()['token']}"}
+
+
+def provision_admin(client):
+    """Create an admin using the trusted local provisioning command, never public signup."""
+    from click.testing import CliRunner
+
+    from cli.admin import main
+
+    result = CliRunner().invoke(
+        main, ["--email", "founder@dbdoctor-admin.io"], input="hunter2hunter2\nhunter2hunter2\n"
+    )
+    assert result.exit_code == 0, result.output
+    response = client.post(
+        "/auth/login", json={"email": "founder@dbdoctor-admin.io", "password": "hunter2hunter2"}
+    )
+    assert response.status_code == 200
+    return {"Authorization": f"Bearer {response.json()['token']}"}

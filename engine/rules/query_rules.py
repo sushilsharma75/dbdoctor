@@ -17,7 +17,7 @@ def _is_workload_query(q: QueryStat) -> bool:
 @register
 class HighTotalTimeQuery(Rule):
     id = "R-Q1"
-    title = "One query consumes a large share of total database time"
+    title = "One query consumes a large share of captured statement time"
     category = "queries"
 
     def evaluate(self, snapshot: Snapshot) -> list[Finding]:
@@ -37,13 +37,14 @@ class HighTotalTimeQuery(Rule):
                     evidence={
                         "calls": q.calls,
                         "total_ms": round(q.total_time_ms, 1),
-                        "pct_of_db_time": round(pct * 100, 1),
+                        "pct_of_captured_time": round(pct * 100, 1),
                         "mean_ms": round(q.mean_time_ms, 2),
                         "rows_per_call": round(q.rows_returned / q.calls, 1) if q.calls else 0,
                         "query_digest": q.query_digest,
                     },
                     suggested_action=(
-                        "This single statement dominates database time. Investigate its "
+                        "This statement accounts for a large share of captured statement time. "
+                        "Investigate its "
                         "execution plan first; typical fixes are an index on its filter "
                         "columns, caching its result if it repeats, or restructuring the "
                         "query. Test any change in staging first."
@@ -57,7 +58,7 @@ class HighTotalTimeQuery(Rule):
 @register
 class SlowMeanTimeQuery(Rule):
     id = "R-Q2"
-    title = "Query is slow on every execution"
+    title = "Query has high mean execution time"
     category = "queries"
 
     def evaluate(self, snapshot: Snapshot) -> list[Finding]:
@@ -84,7 +85,8 @@ class SlowMeanTimeQuery(Rule):
                         "query_digest": q.query_digest,
                     },
                     suggested_action=(
-                        "Every execution takes over a second. Check the execution plan for "
+                        "Mean execution time exceeds the configured threshold. Check the execution "
+                        "plan for "
                         "full scans or sorts; an index on the filter/sort columns is the "
                         "usual fix. If the result changes rarely, cache it. Test in "
                         "staging first."

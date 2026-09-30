@@ -87,6 +87,7 @@
     Database size: {{ db_size or 'n/a' }}
   </div>
 
+  {% if score is not none %}
   <div class="scorewrap">
     <svg width="130" height="130" viewBox="0 0 130 130" role="img" aria-label="health score">
       <circle cx="65" cy="65" r="54" fill="none" stroke="#e8e5de" stroke-width="14"/>
@@ -103,10 +104,13 @@
       </div>
     </div>
   </div>
+{% endif %}
 </div>
+{% if score is none %}<p>Health score unavailable: insufficient evidence.</p>{% endif %}
 
 <!-- 2 · executive summary -->
 <h2>Executive summary</h2>
+<p class="small muted">Observation coverage: {% for name, state in coverage.items() %}{{ name }}: {{ state }}{{ "; " if not loop.last }}{% endfor %}. Missing data is not a passed check.</p>
 <ul>
   {% for bullet in summary_bullets %}<li>{{ bullet }}</li>{% endfor %}
 </ul>
@@ -143,7 +147,7 @@
 <h2 class="pagebreak">Slow queries</h2>
 {% if slow_queries %}
 <table>
-  <tr><th>Statement (normalized)</th><th>Calls</th><th>Total ms</th><th>Mean ms</th><th>% of DB time</th></tr>
+  <tr><th>Statement (normalized)</th><th>Calls</th><th>Total ms</th><th>Mean ms</th><th>% of captured time</th></tr>
   {% for q in slow_queries %}
   <tr>
     <td class="mono">{{ q.sql }}</td>
@@ -244,6 +248,50 @@
 {% endfor %}
 {% else %}
 <p class="muted">No configuration problems detected among the checked settings.</p>
+{% endif %}
+
+{% if routine_stats %}
+<h2>Observed stored-program performance</h2>
+<p>MySQL cumulative instrumentation. Nested time can overlap outer execution time; do not add them.</p>
+<table><tr><th>Routine</th><th>Calls</th><th>Total ms</th><th>Nested statements</th><th>Nested ms</th></tr>
+{% for r in routine_stats %}<tr><td>{{ r.name }} ({{ r.kind }})</td><td>{{ r.calls }}</td><td>{{ r.total_time_ms }}</td><td>{{ r.nested_statements }}</td><td>{{ r.nested_time_ms }}</td></tr>{% endfor %}</table>
+{% endif %}
+{% if schema_catalog %}
+<h2>Schema and stored procedure analysis</h2>
+<p>{{ schema_catalog.tables | length }} tables, {{ schema_catalog.indexes | length }} indexes,
+{{ schema_catalog.views | length }} views and {{ schema_catalog.routines | length }} routines
+from {{ schema_catalog.source_count }} DDL files.</p>
+<ul>{% for note in schema_catalog.limitations + schema_catalog.warnings %}<li>{{ note }}</li>{% endfor %}</ul>
+{% for routine in schema_catalog.routines %}
+<div class="card">
+<h3>{{ routine.name }} ({{ routine.kind }}, {{ routine.language }})</h3>
+<p>DDL file {{ routine.source_file }}, line {{ routine.line }}.
+Dependencies: {{ routine.dependencies | join(', ') or 'none resolved' }}.</p>
+<p>Loop sites: {{ routine.loop_lines | join(', ') or 'none detected' }};
+branch sites: {{ routine.branch_lines | join(', ') or 'none detected' }};
+dynamic SQL sites: {{ routine.dynamic_sql_lines | join(', ') or 'none detected' }}.</p>
+{% if routine.parameters or routine.variables %}
+<h4>Parameters and local variables</h4>
+<table><tr><th>Name</th><th>Kind / type</th><th>Declaration line</th><th>Lexical occurrences</th><th>Assignment lines</th></tr>
+{% for v in routine.parameters + routine.variables %}
+<tr><td>{{ v.name }}</td><td>{{ v.kind }} / {{ v.data_type }}</td><td>{{ v.declaration_line }}</td><td>{{ v.occurrences }}</td><td>{{ v.assignment_lines | join(', ') }}</td></tr>
+{% endfor %}</table>
+{% endif %}
+{% if routine.temporary_tables %}
+<h4>Temporary tables</h4>
+<table><tr><th>Name</th><th>Created at line</th><th>Columns / indexes</th><th>Read / write / drop lines</th></tr>
+{% for t in routine.temporary_tables %}
+<tr><td>{{ t.name }}</td><td>{{ t.creation_line }}</td><td>{{ t.columns | join(', ') or 'derived/unknown' }} / {{ t.indexes | join(', ') or 'none detected' }}</td><td>{{ t.read_lines | join(', ') }} / {{ t.write_lines | join(', ') }} / {{ t.drop_lines | join(', ') }}</td></tr>
+{% endfor %}</table>
+{% endif %}
+{% if routine.statements %}
+<h4>Static statements</h4>
+<table><tr><th>Line</th><th>Normalized SQL</th><th>Parsed</th></tr>
+{% for statement in routine.statements %}<tr><td>{{ statement.line }}</td><td class="mono">{{ statement.normalized_sql }}</td><td>{{ 'yes' if statement.parsed else 'no — review required' }}</td></tr>{% endfor %}</table>
+{% endif %}
+<ul>{% for note in routine.limitations %}<li>{{ note }}</li>{% endfor %}</ul>
+</div>
+{% endfor %}
 {% endif %}
 
 <!-- 9 · developer action plan -->

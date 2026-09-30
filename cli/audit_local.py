@@ -29,7 +29,10 @@ def print_result(path: str) -> None:
         f"  ·  collected={result.collected_at:%Y-%m-%d %H:%M}"
     )
     deductions = ", ".join(f"{c} -{d}" for c, d in result.score.category_deductions.items() if d)
-    print(f"HEALTH SCORE: {result.score.score}/100   ({deductions or 'no deductions'})")
+    if result.score.score is None:
+        print("HEALTH SCORE: unavailable (insufficient query/table evidence)")
+    else:
+        print(f"HEALTH SCORE: {result.score.score}/100   ({deductions or 'no deductions'})")
     print(f"{'=' * 78}")
 
     if not result.findings:

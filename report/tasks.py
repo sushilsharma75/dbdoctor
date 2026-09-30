@@ -21,12 +21,23 @@ def _index_name(table: str, columns: str) -> str:
 
 def suggested_sql(finding: Finding) -> str | None:
     """A concrete SQL change for findings that have one."""
-    table = finding.affected_object.split(".")[-1]
+    import re
+
+    def quoted(name):
+        quote = '"' if finding.engine == "postgres" else "`"
+        return ".".join(
+            quote + part.replace(quote, quote + quote) + quote for part in name.split(".")
+        )
+
+    table = quoted(str(finding.evidence.get("qualified_table", finding.affected_object)))
     if finding.rule_id == "R-I1":
         columns = str(finding.evidence.get("candidate_columns", ""))
         if not columns:
             return None
-        name = _index_name(table, columns)
+        if not all(re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]*", c.strip()) for c in columns.split(",")):
+            return None
+        name = quoted(_index_name(finding.affected_object, columns))
+        columns = ", ".join(quoted(c.strip()) for c in columns.split(","))
         if finding.engine == "postgres":
             return (
                 f"-- CONCURRENTLY avoids locking writes during the build\n"
@@ -37,7 +48,12 @@ def suggested_sql(finding: Finding) -> str | None:
             f"ALTER TABLE {table} ADD INDEX {name} ({columns}), ALGORITHM=INPLACE, LOCK=NONE;"
         )
     if finding.rule_id in ("R-I2", "R-I3"):
-        index = finding.affected_object.split(".")[-1]
+        parts = finding.affected_object.split(".")
+        if len(parts) != 3:
+            return None
+        schema, table_name, index_name = parts
+        index = quoted(f"{schema}.{index_name}" if finding.engine == "postgres" else index_name)
+        table = quoted(f"{schema}.{table_name}")
         if finding.engine == "postgres":
             return (
                 f"-- keep the definition somewhere first, so it can be recreated\n"
