@@ -229,29 +229,17 @@ def parse_dsn(dsn: str) -> dict:
 
 
 # --------------------------------------------------------------------------
-# Capability self-check + remediation guidance (T2.7): misconfigured
-# performance_schema is a degraded run with exact fix steps, never a crash
+# Capability self-check: missing query statistics are reported without
+# treating an intentionally disabled performance_schema as a configuration fix.
 # --------------------------------------------------------------------------
 
-CONSUMER_FIX = """\
+QUERY_STATS_NOTE = """\
 +----------------------------------------------------------------------------+
-| performance_schema statement digests are DISABLED on this server.          |
+| Per-query statistics are unavailable for this snapshot.                    |
 |                                                                            |
-| The snapshot was still written, but WITHOUT per-query statistics — the     |
-| most valuable part of the audit. To enable at runtime (no restart), have   |
-| a DBA run:                                                                 |
-|                                                                            |
-|   UPDATE performance_schema.setup_consumers                                |
-|      SET ENABLED = 'YES'                                                   |
-|    WHERE NAME IN ('statements_digest', 'global_instrumentation',           |
-|                   'thread_instrumentation');                               |
-|                                                                            |
-| To make it permanent, add to my.cnf under [mysqld]:                        |
-|                                                                            |
-|   performance_schema = ON                                                  |
-|   performance-schema-consumer-statements-digest = ON                       |
-|                                                                            |
-| Then let the workload run for a day and re-run this collector.             |
+| DBDoctor still analyzes schema, table and index metadata, configuration,   |
+| connections, and lock observations. An approved slow query log plus        |
+| time-aligned CPU and memory metrics can add workload evidence.              |
 +----------------------------------------------------------------------------+
 """
 
@@ -307,8 +295,10 @@ def check_capabilities(cur, is_mariadb: bool, sys_available: bool) -> tuple[list
             )
     else:
         notes.append(
-            "performance_schema = OFF; per-query statistics unavailable. Add "
-            "performance_schema = ON to my.cnf [mysqld] and restart."
+            "performance_schema = OFF; per-query statistics unavailable. This is "
+            "a capability limitation, not a recommendation to change the server. "
+            "Where policy permits, provide slow query logs and time-aligned CPU, "
+            "memory, and connection metrics for additional workload evidence."
         )
 
     if is_mariadb:
@@ -703,8 +693,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"wrote {args.out}  (queries={n_q}, tables={n_t}, capabilities={','.join(caps)})")
     if "query_stats" not in caps:
         print()
-        print(CONSUMER_FIX)
-        print("warning: snapshot written with reduced capabilities (see guide above)")
+        print(QUERY_STATS_NOTE)
+        print("note: snapshot written without per-query statistics")
     for note in snapshot["meta"]["capability_notes"]:
         print(f"note: {note}")
     return 0

@@ -1,0 +1,7 @@
+[
+  {"collected_at": "2026-10-20T14:00:00Z", "cpu_pct": 42.5, "memory_used_bytes": 11811160064, "memory_total_bytes": 17179869184, "connections": 76},
+  {"collected_at": "2026-10-20T14:02:00Z", "cpu_pct": 88.1, "memory_used_bytes": 15032385536, "memory_total_bytes": 17179869184, "connections": 132},
+  {"collected_at": "2026-10-20T14:04:00Z", "cpu_pct": 93.7, "memory_used_bytes": 15569256448, "memory_total_bytes": 17179869184, "connections": 146},
+  {"collected_at": "2026-10-20T14:06:00Z", "cpu_pct": 79.2, "memory_used_bytes": 14763950080, "memory_total_bytes": 17179869184, "connections": 121},
+  {"collected_at": "2026-10-20T14:08:00Z", "cpu_pct": 51.4, "memory_used_bytes": 12884901888, "memory_total_bytes": 17179869184, "connections": 89}
+]

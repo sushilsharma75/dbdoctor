@@ -36,13 +36,13 @@ class MissingIndexCandidate(Rule):
         findings = []
         seen = set()
         for q in snapshot.queries:
-            if not postgres and (
-                not q.full_scan_flag
-                or q.calls < T.i1_min_calls
-                or not q.rows_examined
-                or q.rows_examined / max(q.rows_returned, 1) < T.i1_scan_selectivity
-            ):
-                continue
+            from_slow_log = q.source == "slow_query_log"
+            if not postgres:
+                if (not q.full_scan_flag and not from_slow_log) or not q.rows_examined:
+                    continue
+                min_calls = 1 if from_slow_log else T.i1_min_calls
+                if q.calls < min_calls or q.rows_examined / max(q.rows_returned, 1) < T.i1_scan_selectivity:
+                    continue
             for reference, columns in filter_candidates(q.normalized_sql, snapshot.meta.engine):
                 matches = [
                     t
@@ -83,28 +83,46 @@ class MissingIndexCandidate(Rule):
                     extra["calls"] = q.calls
                     extra["rows_examined_per_call"] = round(q.rows_examined / max(q.calls, 1))
                     extra["rows_returned_per_call"] = round(q.rows_returned / max(q.calls, 1), 1)
+                    if from_slow_log:
+                        extra["source"] = "slow_query_log"
                 display = (
                     table.name
                     if sum(t.name == table.name for t in snapshot.tables) == 1
                     else qualified
                 )
-                findings.append(self._make(snapshot, display, table.size_bytes, columns, **extra))
+                findings.append(
+                    self._make(
+                        snapshot, display, table.size_bytes, columns,
+                        slow_log=from_slow_log, **extra
+                    )
+                )
         return findings
 
-    def _make(self, snapshot, table, size, columns, **extra_evidence) -> Finding:
+    def _make(self, snapshot, table, size, columns, *, slow_log=False, **extra_evidence) -> Finding:
         col_list = ", ".join(columns)
+        rationale = (
+            f"A slow-log statement examines many rows while filtering {table} "
+            f"on ({col_list}). This is a candidate only; confirm with EXPLAIN. "
+            if slow_log
+            else f"Captured queries filter {table} on ({col_list}), and scan counters are high. "
+        )
         return self.finding(
             snapshot,
-            severity="HIGH" if size >= T.i1_high_table_size_bytes else "MEDIUM",
+            severity="MEDIUM" if slow_log else "HIGH" if size >= T.i1_high_table_size_bytes else "MEDIUM",
+            title=(
+                "Slow-log query examines many rows; index may help"
+                if slow_log
+                else self.title
+            ),
             affected_object=table,
             evidence={"table_size": fmt_bytes(size), "candidate_columns": col_list}
             | {k: v for k, v in extra_evidence.items() if v is not None},
             suggested_action=(
-                f"Captured queries filter {table} on ({col_list}), and scan counters are high. "
-                f"Check the execution plan to determine whether an index on ({col_list}) helps. "
+                rationale
+                + f"Check the execution plan to determine whether an index on ({col_list}) helps. "
                 + STAGING_NOTE
             ),
-            confidence="medium",  # always: only a plan check can prove it (V1, T5.4)
+            confidence="low" if slow_log else "medium",  # only a plan can prove a candidate
             impact=float(size),
         )
 

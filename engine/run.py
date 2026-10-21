@@ -60,7 +60,7 @@ def run_all(snapshot: Snapshot) -> AnalysisResult:
         "indexes": "observed" if snapshot.indexes else "no observations",
         "settings": "observed" if snapshot.settings else "no observations",
         "operations": "observed"
-        if snapshot.connections or snapshot.sessions or snapshot.lock_waits
+        if snapshot.connections or snapshot.sessions or snapshot.lock_waits or snapshot.resource_samples
         else "no observations",
     }
     score = compute_score(findings)

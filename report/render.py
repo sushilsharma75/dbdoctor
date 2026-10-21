@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -109,16 +110,32 @@ def render_report(
     template = env.get_template("report.html.j2")
 
     top = result.score.top_findings
-    total_ms = sum(q.total_time_ms for q in snapshot.queries) or 1.0
+    total_by_source: dict[str, float] = defaultdict(float)
+    for query in snapshot.queries:
+        total_by_source[query.source or "collector"] += query.total_time_ms
     slow_queries = [
         {
             "sql": q.normalized_sql,
             "calls": q.calls,
             "total_ms": q.total_time_ms,
             "mean_ms": q.mean_time_ms,
-            "pct": q.total_time_ms / total_ms * 100,
+            "pct": q.total_time_ms / (total_by_source[q.source or "collector"] or 1.0) * 100,
+            "source": q.source or "collector",
         }
         for q in sorted(snapshot.queries, key=lambda q: -q.total_time_ms)[:10]
+    ]
+    resource_rows = [
+        {
+            "time": sample.collected_at.strftime("%Y-%m-%d %H:%M UTC"),
+            "cpu": f"{sample.cpu_pct:.1f}%" if sample.cpu_pct is not None else "n/a",
+            "memory": (
+                f"{sample.memory_used_bytes / sample.memory_total_bytes * 100:.1f}%"
+                if sample.memory_used_bytes is not None and sample.memory_total_bytes
+                else "n/a"
+            ),
+            "connections": sample.connections if sample.connections is not None else "n/a",
+        }
+        for sample in sorted(snapshot.resource_samples, key=lambda row: row.collected_at)[-30:]
     ]
 
     if snapshot.meta.engine == "postgres":
@@ -160,6 +177,7 @@ def render_report(
         ai_texts=ai_texts,
         tickets={finding_key(f): ticket_markdown(f, ai_texts.get(finding_key(f))) for f in top},
         slow_queries=slow_queries,
+        resource_rows=resource_rows,
         index_findings=[f for f in result.findings if f.category == "indexes"],
         ops_findings=[f for f in result.findings if f.category == "ops"],
         config_findings=[f for f in result.findings if f.category == "config"],

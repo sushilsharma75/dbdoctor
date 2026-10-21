@@ -230,12 +230,15 @@ CONFIG_CHECKS: tuple[ConfigCheck, ...] = (
     ),
     ConfigCheck(
         "performance_schema",
-        "LOW",
+        "INFO",
         _performance_schema_off,
-        "performance_schema is disabled, so per-query statistics are not being recorded "
-        "at all — this audit is running partially blind and future ones will too.",
-        "Set performance_schema = ON in my.cnf and restart "
-        "(see docs/enable_performance_schema.md).",
+        "performance_schema is disabled, so this audit has no per-query aggregate "
+        "statistics. This is a data-coverage note, not a server configuration problem. "
+        "DBDoctor can still analyze schema, table and index metadata, configuration, "
+        "connections, and lock observations. Slow query logs and time-aligned CPU and "
+        "memory metrics can provide additional workload evidence.",
+        "No change to performance_schema is required. Supply an approved slow query "
+        "log and workload metrics when available.",
     ),
 )
 

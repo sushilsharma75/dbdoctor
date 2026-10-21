@@ -20,6 +20,8 @@ export default function NewAudit() {
   const [alias, setAlias] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [ddl, setDdl] = useState<File[]>([]);
+  const [slowLog, setSlowLog] = useState<File | null>(null);
+  const [workloadMetrics, setWorkloadMetrics] = useState<File | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -32,7 +34,7 @@ export default function NewAudit() {
     setBusy(true);
     setError('');
     try {
-      await api.uploadSnapshot(file, alias || 'my database', ddl);
+      await api.uploadSnapshot(file, alias || 'my database', ddl, slowLog ?? undefined, workloadMetrics ?? undefined);
       router.push('/dashboard');
     } catch (err) {
       setError((err as Error).message);
@@ -101,6 +103,10 @@ export default function NewAudit() {
         <section className="panel p-5" data-testid="step-upload">
           <p className="font-mono text-[11px] text-flag-warning">03</p>
           <h2 className="mt-1 text-sm font-medium text-bone-100">Upload the snapshot</h2>
+          <p className="mt-2 text-[13px] leading-relaxed text-bone-400">
+            The collector snapshot already includes table sizes, estimated row counts and connection data.
+            Add schema DDL, a MySQL slow log, and time-aligned monitoring samples where available.
+          </p>
           <div className="mt-3 space-y-3">
             <div>
               <label className="label mb-1.5 block">database name (shown on the report)</label>
@@ -113,6 +119,30 @@ export default function NewAudit() {
                 data-testid="alias"
               />
             </div>
+            {engine === 'mysql' && (
+              <>
+                <div>
+                  <label htmlFor="slow-log" className="label mb-1.5 block">MySQL slow query log (optional)</label>
+                  <input id="slow-log" type="file" accept=".log,.txt,text/plain"
+                    onChange={(e) => setSlowLog(e.target.files?.[0] ?? null)}
+                    className="field cursor-pointer" data-testid="slow-log-file" />
+                  <p className="mt-2 text-xs text-bone-400">
+                    Standard MySQL slow log format, up to 5 MiB. Query literals are stripped before analysis.
+                  </p>
+                </div>
+                <div>
+                  <label htmlFor="workload-metrics" className="label mb-1.5 block">Monitoring samples (optional JSON)</label>
+                  <input id="workload-metrics" type="file" accept=".json,application/json"
+                    onChange={(e) => setWorkloadMetrics(e.target.files?.[0] ?? null)}
+                    className="field cursor-pointer" data-testid="workload-metrics-file" />
+                  <p className="mt-2 text-xs text-bone-400">
+                    JSON array of samples with collected_at, cpu_pct, memory_used_bytes, memory_total_bytes and connections.
+                    Use UTC ISO 8601 timestamps; maximum 2 MiB.
+                  </p>
+                  <pre className="panel-inset mt-2 overflow-x-auto p-3 font-mono text-[10px] text-bone-300">{`[\n  {"collected_at":"2026-10-17T12:00:00Z","cpu_pct":76.2,"memory_used_bytes":7516192768,"memory_total_bytes":17179869184,"connections":84}\n]`}</pre>
+                </div>
+              </>
+            )}
             <div>
               <label className="label mb-1.5 block">snapshot.json</label>
               <input

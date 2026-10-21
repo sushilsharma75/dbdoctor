@@ -1,0 +1,20 @@
+# Time: 2026-10-20T14:02:11.000000Z
+# User@Host: demo[demo] @ localhost []  Id: 101
+# Query_time: 4.812345  Lock_time: 0.000120 Rows_sent: 25  Rows_examined: 12000000
+use demo_shop;
+SET timestamp=1792504931;
+SELECT id, status, total_cents FROM orders WHERE customer_id = 74219 AND status = 'open';
+
+# Time: 2026-10-20T14:04:32.000000Z
+# User@Host: demo[demo] @ localhost []  Id: 102
+# Query_time: 2.103000  Lock_time: 0.000000 Rows_sent: 50  Rows_examined: 25000000
+use demo_shop;
+SET timestamp=1792505072;
+SELECT id, order_id, product_id FROM order_items ORDER BY order_id LIMIT 50 OFFSET 500000;
+
+# Time: 2026-10-20T14:07:18.000000Z
+# User@Host: demo[demo] @ localhost []  Id: 103
+# Query_time: 1.328400  Lock_time: 0.000050 Rows_sent: 1  Rows_examined: 1800000
+use demo_shop;
+SET timestamp=1792505238;
+SELECT id, email FROM customers WHERE email = 'person@example.invalid';

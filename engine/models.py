@@ -85,6 +85,10 @@ class QueryStat(BaseModel):
     normalized_sql: str = Field(
         description="Statement text with all literals stripped. PG: pg_stat_statements.query plus a defense-in-depth regex pass. MySQL: DIGEST_TEXT (pre-normalized by the server)."
     )
+    source: str | None = Field(
+        default=None,
+        description="Optional provenance for supplemental statement statistics (for example slow_query_log).",
+    )
     calls: int = Field(
         description="Cumulative execution count. PG: pg_stat_statements.calls. MySQL: COUNT_STAR."
     )
@@ -288,6 +292,16 @@ class RoutineStat(BaseModel):
     nested_time_ms: float
 
 
+class ResourceSample(BaseModel):
+    """Optional time-aligned host/database metrics supplied by monitoring."""
+
+    collected_at: datetime
+    cpu_pct: float | None = Field(default=None, ge=0, le=100)
+    memory_used_bytes: int | None = Field(default=None, ge=0)
+    memory_total_bytes: int | None = Field(default=None, gt=0)
+    connections: int | None = Field(default=None, ge=0)
+
+
 class Snapshot(BaseModel):
     """Root document: one normalized collection run from one database."""
 
@@ -295,6 +309,10 @@ class Snapshot(BaseModel):
     routine_stats: list[RoutineStat] = Field(
         default_factory=list,
         description="PG: not collected. MySQL: events_statements_summary_by_program, optional instrumentation.",
+    )
+    resource_samples: list[ResourceSample] = Field(
+        default_factory=list,
+        description="Optional time-series CPU, memory and connection observations supplied by an external monitor.",
     )
     schema_catalog: SchemaCatalog | None = Field(
         default=None,

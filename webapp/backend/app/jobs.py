@@ -141,6 +141,10 @@ async def create_job(
     background: BackgroundTasks,
     snapshot: UploadFile = File(..., description="snapshot.json from a dbdoctor collector"),
     ddl: list[UploadFile] | None = File(None, description="Optional schema/routine SQL files"),
+    slow_log: UploadFile | None = File(None, description="Optional MySQL slow query log"),
+    workload_metrics: UploadFile | None = File(
+        None, description="Optional JSON array of time-aligned CPU, memory and connection samples"
+    ),
     client_alias: str = Form("client"),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -197,6 +201,48 @@ async def create_job(
             )
         except ValueError as exc:
             raise HTTPException(422, str(exc)) from None
+
+    if workload_metrics:
+        if parsed.meta.engine == "postgres":
+            raise HTTPException(422, "external workload metrics are currently supported for MySQL/MariaDB audits")
+        try:
+            from engine.models import ResourceSample
+
+            metric_bytes = await workload_metrics.read(2 * 1024 * 1024 + 1)
+            if len(metric_bytes) > 2 * 1024 * 1024:
+                raise HTTPException(413, "workload metrics exceed the 2 MiB limit")
+            payload = json.loads(metric_bytes)
+            if isinstance(payload, dict):
+                payload = payload.get("samples")
+            if not isinstance(payload, list) or len(payload) > 10000:
+                raise ValueError("expected an array of at most 10,000 samples")
+            parsed.resource_samples = [ResourceSample.model_validate(row) for row in payload]
+            parsed.meta.capabilities = sorted(set(parsed.meta.capabilities + ["external_resource_metrics"]))
+        except HTTPException:
+            raise
+        except (json.JSONDecodeError, UnicodeDecodeError, ValueError, ValidationError) as exc:
+            raise HTTPException(422, f"invalid workload metrics JSON: {exc}") from None
+
+    if slow_log:
+        if parsed.meta.engine == "postgres":
+            raise HTTPException(422, "slow query log ingestion currently supports MySQL/MariaDB logs")
+        from engine.slowlog import parse_mysql_slow_log
+
+        content = await slow_log.read(5 * 1024 * 1024 + 1)
+        if len(content) > 5 * 1024 * 1024:
+            raise HTTPException(413, "slow query log exceeds the 5 MiB limit")
+        try:
+            log_text = content.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            raise HTTPException(422, "slow query log must be UTF-8 text") from None
+        parsed.queries.extend(parse_mysql_slow_log(log_text))
+        parsed.queries.sort(key=lambda q: q.total_time_ms, reverse=True)
+        parsed.queries = parsed.queries[:200]
+        parsed.meta.capabilities = sorted(set(parsed.meta.capabilities + ["slow_query_log"]))
+        parsed.meta.capability_notes.append(
+            "Uploaded slow query log entries cover only statements above the configured "
+            "threshold and time window; totals are not a complete workload profile."
+        )
 
     job = AuditJob(user_id=user.id, engine=parsed.meta.engine, client_alias=client_alias[:120])
     db.add(job)

@@ -147,10 +147,11 @@
 <h2 class="pagebreak">Slow queries</h2>
 {% if slow_queries %}
 <table>
-  <tr><th>Statement (normalized)</th><th>Calls</th><th>Total ms</th><th>Mean ms</th><th>% of captured time</th></tr>
+  <tr><th>Statement (normalized)</th><th>Source</th><th>Calls</th><th>Total ms</th><th>Mean ms</th><th>% of captured time</th></tr>
   {% for q in slow_queries %}
   <tr>
     <td class="mono">{{ q.sql }}</td>
+    <td>{{ q.source }}</td>
     <td class="num">{{ '{:,}'.format(q.calls) }}</td>
     <td class="num">{{ '{:,.0f}'.format(q.total_ms) }}</td>
     <td class="num">{{ '%.2f' % q.mean_ms }}</td>
@@ -158,9 +159,20 @@
   </tr>
   {% endfor %}
 </table>
-<p class="small muted">Top statements by cumulative execution time since statistics were last reset. All literals are stripped before data leaves your environment.</p>
+<p class="small muted">Top statements by captured execution time. Percentages are calculated within each source because collector statistics and slow-log windows may overlap. All literals are stripped before storage.</p>
 {% else %}
 <p class="muted">Per-query statistics were not available on this run ({{ 'pg_stat_statements' if engine == 'postgres' else 'performance_schema' }} disabled — see capability notes).</p>
+{% endif %}
+
+{% if resource_rows %}
+<h2>Workload resource samples</h2>
+<p class="small muted">Externally supplied monitoring samples, ordered by collection time. Up to the latest 30 are shown.</p>
+<table>
+  <tr><th>Time (UTC)</th><th>CPU</th><th>Memory used</th><th>Connections</th></tr>
+  {% for row in resource_rows %}
+  <tr><td>{{ row.time }}</td><td>{{ row.cpu }}</td><td>{{ row.memory }}</td><td>{{ row.connections }}</td></tr>
+  {% endfor %}
+</table>
 {% endif %}
 
 <!-- 5 · index advisor -->
